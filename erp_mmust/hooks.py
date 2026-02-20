@@ -262,7 +262,8 @@ fixtures = [
             ["name", "in", [
                 "Donor-custom_constituency_code",
                 "Donor-custom_sponsor_gl_account",
-                "Donation-custom_cheque_id"
+                "Donation-custom_cheque_id",
+                "Donation-custom_bank_account"
             ]]
         ]
     }

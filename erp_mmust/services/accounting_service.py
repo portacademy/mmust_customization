@@ -600,8 +600,8 @@ def process_accounting(doc, method=None):
 def post_donation_journal_entry(doc, method=None):
   
     company      = get_company()
-    bank_account = get_bank_account(company)
-    bank_account = 
+    # bank_account = get_bank_account(company)
+    bank_account = doc.custom_bank_account
     funding_account = get_funding_body_account(doc.donor)
 
     amount = flt(doc.amount)
@@ -1552,58 +1552,3 @@ def get_receivable_account(company):
         abbr    = frappe.db.get_value("Company", company, "abbr")
         account = f"Debtors - {abbr}"
     return account
-
-# def get_bank_account(company):
-#     account = frappe.db.get_value("Company", company, "default_bank_account")
-#     if not account:
-#         abbr    = frappe.db.get_value("Company", company, "abbr")
-#         account = f"Bank - {abbr}"
-#     return account
-
-# def get_bank_account(company):
-#     # First try company default
-#     account = frappe.db.get_value("Company", company, "default_bank_account")
-#     frappe.log_error(title="get_bank_account", message=f"company={company} | default_bank_account={account}")
-#     if account:
-#         return account
-
-#     # Fall back to first Bank Account record for this company
-#     bank_account = frappe.db.get_value(
-#         "Bank Account",
-#         {"company": company, "is_company_account": 1, "disabled": 0},
-#         "account"
-#     )
-#     frappe.log_error(title="get_bank_account", message=f"fallback bank_account={bank_account}")
-#     if bank_account:
-#         return bank_account
-
-#     frappe.throw(
-#         f"No bank account found for company {company}. "
-#         f"Please set a Default Bank Account in Company settings."
-#     )
-
-
-
-def get_bank_account(company):
-    # First try MMUST Donor Settings
-    account = frappe.db.get_single_value("MMUST Donor Settings", "default_payment_bank_account")
-    if account:
-        return account
-
-    # # Fall back to company default
-    # account = frappe.db.get_value("Company", company, "default_bank_account")
-    # if account:
-    #     return account
-
-    # # Fall back to first Bank Account record
-    # bank_account = frappe.db.get_value(
-    #     "Bank Account",
-    #     {"company": company, "is_company_account": 1, "disabled": 0},
-    #     "account"
-    # )
-    # if bank_account:
-    #     return bank_account
-    else :
-        frappe.throw(
-            f"No bank account found. Please set a Default Payment Bank Account in MMUST Donor Settings."
-        )
