@@ -392,26 +392,26 @@ def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filt
     current_doc = filters.get("current_doc")  # pass current doc name to exclude self
 
     # Get SA names already used in a closed Refund to Funder
-    used_sa_names = frappe.db.sql("""
-        SELECT DISTINCT sponsorship_allocation
-        FROM `tabStudent Refund`
-        WHERE action_type = 'Refund to Funder'
-        AND docstatus = 1
-        AND sponsorship_allocation IS NOT NULL
-        AND sponsorship_allocation != ''
-        AND name != %s
-    """, (current_doc or "",), as_list=True)
-
     # used_sa_names = frappe.db.sql("""
     #     SELECT DISTINCT sponsorship_allocation
     #     FROM `tabStudent Refund`
     #     WHERE action_type = 'Refund to Funder'
-    #     AND workflow_state = 'Closed'
     #     AND docstatus = 1
     #     AND sponsorship_allocation IS NOT NULL
     #     AND sponsorship_allocation != ''
     #     AND name != %s
     # """, (current_doc or "",), as_list=True)
+
+    used_sa_names = frappe.db.sql("""
+        SELECT DISTINCT sponsorship_allocation
+        FROM `tabStudent Refund`
+        WHERE action_type = 'Refund to Funder'
+        AND workflow_state = 'Closed'
+        AND docstatus = 1
+        AND sponsorship_allocation IS NOT NULL
+        AND sponsorship_allocation != ''
+        AND name != %s
+    """, (current_doc or "",), as_list=True)
 
     used_sa_list = [d[0] for d in used_sa_names] if used_sa_names else []
 
