@@ -29,7 +29,8 @@
             "fieldtype": "Select",
             "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation",
             "reqd": 1,
-            "in_list_view": 1
+            "in_list_view": 1,
+            "in_standard_filter": 1
         },
         {
             "fieldname": "cancellation_label_helb",
@@ -59,7 +60,10 @@
             "label": "Posting Date",
             "fieldtype": "Date",
             "reqd": 1,
-            "default": "Today"
+            "default": "Today",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "search_index": 1
         },
         {
             "fieldname": "section_funder",
@@ -73,7 +77,9 @@
             "fieldtype": "Link",
             "options": "Donor",
             "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "description": "External funder/donor (HELB, CDF Constituency, etc.)"
+            "description": "External funder/donor (HELB, CDF Constituency, etc.)",
+            "in_list_view": 1,
+            "in_standard_filter": 1
         },
         {
             "fieldname": "funder_name",
@@ -118,7 +124,10 @@
             "fieldtype": "Link",
             "options": "Sponsorship Allocation",
             "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "description": "Link to the original Sponsorship Allocation document"
+            "description": "Link to the original Sponsorship Allocation document",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "search_index": 1
         },
         {
             "fieldname": "cancelled_sponsorship_allocation",

@@ -17,7 +17,8 @@ frappe.ui.form.on('Student Refund', {
             return {
                 query: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_sponsorship_allocations',
                 filters: {
-                    funder: frm.doc.funder
+                    funder: frm.doc.funder,
+                    current_doc: frm.doc.name || ''
                 }
             };
         });

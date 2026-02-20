@@ -26,15 +26,13 @@
             "fieldname": "refund_print_format",
             "label": "Refund Print Format",
             "fieldtype": "Link",
-            "options": "Print Format",
-            "default": "Sponsorship Cheque Print Format"
+            "options": "Print Format"
         },
         {
             "fieldname": "receipt_cancellation_print_format",
             "label": "Receipt Cancellation Print Format",
             "fieldtype": "Link",
-            "options": "Print Format",
-            "default": "Sponsorship Receipt Cancellation Print Format"
+            "options": "Print Format"
         },
         {
             "fieldname": "col_break_print",
@@ -44,8 +42,7 @@
             "fieldname": "reallocation_print_format",
             "label": "Reallocation Print Format",
             "fieldtype": "Link",
-            "options": "Print Format",
-            "default": "Reallocation Receipt Print Format"
+            "options": "Print Format"
         }
     ],
     "permissions": [

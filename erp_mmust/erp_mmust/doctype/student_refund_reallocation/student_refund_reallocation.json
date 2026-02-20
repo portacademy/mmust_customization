@@ -15,7 +15,7 @@
             "reqd": 1,
             "in_list_view": 1,
             "read_only": 1,
-            "columns": 2
+            "columns": 1
         },
         {
             "fieldname": "student_name",
@@ -32,7 +32,7 @@
             "fieldtype": "Currency",
             "read_only": 1,
             "in_list_view": 1,
-            "columns": 2,
+            "columns": 1,
             "description": "Amount originally allocated to this student in the Sponsorship Allocation"
         },
         {
@@ -69,7 +69,7 @@
             "fieldtype": "Currency",
             "reqd": 1,
             "in_list_view": 1,
-            "columns": 2,
+            "columns": 1,
             "description": "Amount to transfer from source to target student. Cannot exceed original allocated amount or student balance."
         }
     ]

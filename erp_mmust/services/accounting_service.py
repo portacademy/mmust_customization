@@ -930,6 +930,385 @@ def post_refund_payment_entry(doc):
 # RECEIPT CANCELLATION (Full reversal — Receipt Cancellation action type)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# def post_full_receipt_cancellation(doc):
+#     if not doc.sponsorship_allocation:
+#         frappe.throw("Sponsorship Allocation is required for Receipt Cancellation.")
+
+#     def log(msg):
+#         frappe.log_error(title="Receipt Cancellation", message=msg)
+
+#     log("Step 0: Starting receipt cancellation")
+
+#     sa            = frappe.get_doc("Sponsorship Allocation", doc.sponsorship_allocation)
+#     donation_name = sa.donation
+
+#     # Step 1: Find and cancel ALL Payment Entries / JEs linked to the Donation
+#     try:
+#         pe_names = []
+#         if donation_name:
+#             donation = frappe.get_doc("Donation", donation_name)
+
+#             if donation.payment_id:
+#                 pe_names.append(donation.payment_id)
+#                 frappe.db.set_value("Donation", donation_name, "payment_id", None)
+#                 frappe.db.commit()
+
+#             all_pe_refs = frappe.db.sql("""
+#                 SELECT DISTINCT parent FROM `tabPayment Entry Reference`
+#                 WHERE reference_doctype = 'Donation'
+#                 AND reference_name = %s
+#             """, (donation_name,), as_dict=True)
+
+#             for ref in all_pe_refs:
+#                 if ref.parent not in pe_names:
+#                     pe_names.append(ref.parent)
+
+#             log(f"Step 1: PE/JE names found: {pe_names}")
+
+#             frappe.db.sql("""
+#                 DELETE FROM `tabPayment Entry Reference`
+#                 WHERE reference_doctype = 'Donation'
+#                 AND reference_name = %s
+#             """, (donation_name,))
+#             frappe.db.commit()
+
+#             frappe.db.sql("""
+#                 DELETE FROM `tabDynamic Link`
+#                 WHERE link_doctype = 'Donation'
+#                 AND link_name = %s
+#                 AND parenttype = 'Payment Entry'
+#             """, (donation_name,))
+#             frappe.db.commit()
+
+#             for pe_name in pe_names:
+#                 # Could be a JE (from post_donation_journal_entry) or PE
+#                 if frappe.db.exists("Journal Entry", pe_name):
+#                     je = frappe.get_doc("Journal Entry", pe_name)
+#                     if je.docstatus == 1:
+#                         je.cancel()
+#                         frappe.db.commit()
+#                         log(f"Step 1: JE {pe_name} cancelled successfully")
+#                         frappe.msgprint(
+#                             f"✅ Journal Entry <b>{pe_name}</b> cancelled.",
+#                             alert=True, indicator="orange"
+#                         )
+#                 elif frappe.db.exists("Payment Entry", pe_name):
+#                     pe = frappe.get_doc("Payment Entry", pe_name)
+#                     if pe.docstatus == 1:
+#                         pe.cancel()
+#                         frappe.db.commit()
+#                         log(f"Step 1: PE {pe_name} cancelled successfully")
+#                         frappe.msgprint(
+#                             f"✅ Payment Entry <b>{pe_name}</b> cancelled.",
+#                             alert=True, indicator="orange"
+#                         )
+
+#     except Exception as e:
+#         log(f"Step 1 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 1 (Payment Entry/JE): {str(e)}")
+
+#     # Step 2: Cancel the Sponsorship Allocation JE
+#     try:
+#         if sa.journal_entry:
+#             je_name = sa.journal_entry
+#             frappe.db.set_value("Sponsorship Allocation", sa.name, "journal_entry", None)
+#             frappe.db.commit()
+
+#             je = frappe.get_doc("Journal Entry", je_name)
+#             if je.docstatus == 1:
+#                 je.cancel()
+#                 frappe.db.commit()
+#                 log(f"Step 2: JE {je_name} cancelled successfully")
+#                 frappe.msgprint(
+#                     f"✅ Journal Entry <b>{je_name}</b> cancelled.",
+#                     alert=True, indicator="orange"
+#                 )
+#         else:
+#             log("Step 2: No JE linked to SA — skipping")
+#     except Exception as e:
+#         log(f"Step 2 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 2 (Journal Entry): {str(e)}")
+
+#     # Step 3: Clear donation link on Sponsorship Allocation
+#     try:
+#         if donation_name:
+#             frappe.db.set_value("Sponsorship Allocation", sa.name, "donation", None)
+#             frappe.db.commit()
+#             log("Step 3: Donation link cleared on SA")
+#     except Exception as e:
+#         log(f"Step 3 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 3 (Clear donation link): {str(e)}")
+
+#     # Step 4: Cancel the Donation
+#     try:
+#         if donation_name:
+#             donation = frappe.get_doc("Donation", donation_name)
+#             donation.reload()
+#             log(f"Step 4: Donation docstatus before cancel: {donation.docstatus}")
+#             if donation.docstatus == 1:
+#                 donation.cancel()
+#                 frappe.db.commit()
+#                 log(f"Step 4: Donation {donation_name} cancelled successfully")
+#                 frappe.msgprint(
+#                     f"✅ Donation <b>{donation_name}</b> cancelled.",
+#                     alert=True, indicator="orange"
+#                 )
+#         else:
+#             log("Step 4: No donation linked — skipping")
+#     except Exception as e:
+#         log(f"Step 4 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 4 (Donation): {str(e)}")
+
+#     # Step 5: Clear Student Refund → SA link FIRST, then cancel SA
+#     try:
+#         frappe.db.set_value("Student Refund", doc.name, "cancelled_sponsorship_allocation", sa.name)
+#         frappe.db.commit()
+#         log(f"Step 5: Stored cancelled_sponsorship_allocation as {sa.name}")
+
+#         frappe.db.set_value("Student Refund", doc.name, "sponsorship_allocation", None)
+#         frappe.db.commit()
+#         log(f"Step 5: Cleared sponsorship_allocation on Student Refund {doc.name}")
+
+#         frappe.db.set_value("Sponsorship Allocation", sa.name, "journal_entry", None)
+#         frappe.db.set_value("Sponsorship Allocation", sa.name, "donation", None)
+#         frappe.db.commit()
+
+#         sa.reload()
+#         log(f"Step 5: SA docstatus before cancel: {sa.docstatus}")
+
+#         if sa.docstatus == 1:
+#             sa.flags.ignore_links = True
+#             sa.cancel()
+#             frappe.db.commit()
+#             log(f"Step 5: SA {sa.name} cancelled successfully")
+#             frappe.msgprint(
+#                 f"✅ Sponsorship Allocation <b>{sa.name}</b> cancelled.",
+#                 alert=True, indicator="orange"
+#             )
+
+#     except Exception as e:
+#         log(f"Step 5 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 5 (Sponsorship Allocation): {str(e)}")
+
+#     frappe.msgprint(
+#         f"✅ Receipt Cancellation complete for <b>{sa.name}</b>.",
+#         title="Receipt Cancellation Complete",
+#         indicator="green"
+#     )
+
+
+# def post_full_receipt_cancellation(doc):
+#     if not doc.sponsorship_allocation:
+#         frappe.throw("Sponsorship Allocation is required for Receipt Cancellation.")
+
+#     def log(msg):
+#         frappe.log_error(title="Receipt Cancellation", message=msg)
+
+#     log("Step 0: Starting receipt cancellation")
+
+#     sa            = frappe.get_doc("Sponsorship Allocation", doc.sponsorship_allocation)
+#     donation_name = sa.donation
+
+#     # Step 1: Find and cancel ALL JEs linked to the Donation
+#     try:
+#         pe_names = []
+#         if donation_name:
+#             donation = frappe.get_doc("Donation", donation_name)
+
+#             if donation.payment_id:
+#                 pe_names.append(donation.payment_id)
+#                 frappe.db.set_value("Donation", donation_name, "payment_id", None)
+#                 frappe.db.commit()
+
+#             all_pe_refs = frappe.db.sql("""
+#                 SELECT DISTINCT parent FROM `tabPayment Entry Reference`
+#                 WHERE reference_doctype = 'Donation'
+#                 AND reference_name = %s
+#             """, (donation_name,), as_dict=True)
+
+#             for ref in all_pe_refs:
+#                 if ref.parent not in pe_names:
+#                     pe_names.append(ref.parent)
+
+#             log(f"Step 1: PE/JE names found: {pe_names}")
+
+#             frappe.db.sql("""
+#                 DELETE FROM `tabPayment Entry Reference`
+#                 WHERE reference_doctype = 'Donation'
+#                 AND reference_name = %s
+#             """, (donation_name,))
+#             frappe.db.commit()
+
+#             frappe.db.sql("""
+#                 DELETE FROM `tabDynamic Link`
+#                 WHERE link_doctype = 'Donation'
+#                 AND link_name = %s
+#                 AND parenttype = 'Payment Entry'
+#             """, (donation_name,))
+#             frappe.db.commit()
+
+#             for pe_name in pe_names:
+#                 if frappe.db.exists("Journal Entry", pe_name):
+#                     je = frappe.get_doc("Journal Entry", pe_name)
+#                     if je.docstatus == 1:
+#                         je.cancel()
+#                         frappe.db.commit()
+#                         log(f"Step 1: JE {pe_name} cancelled successfully")
+#                         frappe.msgprint(
+#                             f"✅ Journal Entry <b>{pe_name}</b> cancelled.",
+#                             alert=True, indicator="orange"
+#                         )
+#                 elif frappe.db.exists("Payment Entry", pe_name):
+#                     pe = frappe.get_doc("Payment Entry", pe_name)
+#                     if pe.docstatus == 1:
+#                         pe.cancel()
+#                         frappe.db.commit()
+#                         log(f"Step 1: PE {pe_name} cancelled successfully")
+#                         frappe.msgprint(
+#                             f"✅ Payment Entry <b>{pe_name}</b> cancelled.",
+#                             alert=True, indicator="orange"
+#                         )
+
+#     except Exception as e:
+#         log(f"Step 1 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 1 (Payment Entry/JE): {str(e)}")
+
+#     # Step 1b: Find and cancel any Reallocation Student Refunds linked to this SA
+#     try:
+#         reallocation_refunds = frappe.get_all(
+#             "Student Refund",
+#             filters={
+#                 "sponsorship_allocation": sa.name,
+#                 "action_type": "Reallocate to Student",
+#                 "docstatus": 1
+#             },
+#             fields=["name", "journal_entry"]
+#         )
+
+#         log(f"Step 1b: Found {len(reallocation_refunds)} reallocation refunds to cancel")
+
+#         for sr in reallocation_refunds:
+#             # Cancel the reallocation journal entry first
+#             if sr.journal_entry:
+#                 if frappe.db.exists("Journal Entry", sr.journal_entry):
+#                     je = frappe.get_doc("Journal Entry", sr.journal_entry)
+#                     if je.docstatus == 1:
+#                         je.flags.ignore_links = True 
+#                         je.cancel()
+#                         frappe.db.commit()
+#                         log(f"Step 1b: Reallocation JE {sr.journal_entry} cancelled")
+#                         frappe.msgprint(
+#                             f"✅ Reallocation Journal Entry <b>{sr.journal_entry}</b> cancelled.",
+#                             alert=True, indicator="orange"
+#                         )
+#                 frappe.db.set_value("Student Refund", sr.name, "journal_entry", None)
+#                 frappe.db.commit()
+
+#             # Cancel the Student Refund itself
+#             sr_doc = frappe.get_doc("Student Refund", sr.name)
+#             sr_doc.flags.ignore_links = True
+#             sr_doc.cancel()
+#             frappe.db.commit()
+#             log(f"Step 1b: Reallocation Student Refund {sr.name} cancelled")
+#             frappe.msgprint(
+#                 f"✅ Reallocation Student Refund <b>{sr.name}</b> cancelled.",
+#                 alert=True, indicator="orange"
+#             )
+
+#     except Exception as e:
+#         log(f"Step 1b FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 1b (Reallocation Refunds): {str(e)}")
+
+#     # Step 2: Cancel the Sponsorship Allocation JE
+#     try:
+#         if sa.journal_entry:
+#             je_name = sa.journal_entry
+#             frappe.db.set_value("Sponsorship Allocation", sa.name, "journal_entry", None)
+#             frappe.db.commit()
+
+#             je = frappe.get_doc("Journal Entry", je_name)
+#             if je.docstatus == 1:
+#                 je.cancel()
+#                 frappe.db.commit()
+#                 log(f"Step 2: JE {je_name} cancelled successfully")
+#                 frappe.msgprint(
+#                     f"✅ Journal Entry <b>{je_name}</b> cancelled.",
+#                     alert=True, indicator="orange"
+#                 )
+#         else:
+#             log("Step 2: No JE linked to SA — skipping")
+#     except Exception as e:
+#         log(f"Step 2 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 2 (Journal Entry): {str(e)}")
+
+#     # Step 3: Clear donation link on Sponsorship Allocation
+#     try:
+#         if donation_name:
+#             frappe.db.set_value("Sponsorship Allocation", sa.name, "donation", None)
+#             frappe.db.commit()
+#             log("Step 3: Donation link cleared on SA")
+#     except Exception as e:
+#         log(f"Step 3 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 3 (Clear donation link): {str(e)}")
+
+#     # Step 4: Cancel the Donation
+#     try:
+#         if donation_name:
+#             donation = frappe.get_doc("Donation", donation_name)
+#             donation.reload()
+#             log(f"Step 4: Donation docstatus before cancel: {donation.docstatus}")
+#             if donation.docstatus == 1:
+#                 donation.cancel()
+#                 frappe.db.commit()
+#                 log(f"Step 4: Donation {donation_name} cancelled successfully")
+#                 frappe.msgprint(
+#                     f"✅ Donation <b>{donation_name}</b> cancelled.",
+#                     alert=True, indicator="orange"
+#                 )
+#         else:
+#             log("Step 4: No donation linked — skipping")
+#     except Exception as e:
+#         log(f"Step 4 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 4 (Donation): {str(e)}")
+
+#     # Step 5: Clear Student Refund → SA link FIRST, then cancel SA
+#     try:
+#         frappe.db.set_value("Student Refund", doc.name, "cancelled_sponsorship_allocation", sa.name)
+#         frappe.db.commit()
+#         log(f"Step 5: Stored cancelled_sponsorship_allocation as {sa.name}")
+
+#         frappe.db.set_value("Student Refund", doc.name, "sponsorship_allocation", None)
+#         frappe.db.commit()
+#         log(f"Step 5: Cleared sponsorship_allocation on Student Refund {doc.name}")
+
+#         frappe.db.set_value("Sponsorship Allocation", sa.name, "journal_entry", None)
+#         frappe.db.set_value("Sponsorship Allocation", sa.name, "donation", None)
+#         frappe.db.commit()
+
+#         sa.reload()
+#         log(f"Step 5: SA docstatus before cancel: {sa.docstatus}")
+
+#         if sa.docstatus == 1:
+#             sa.flags.ignore_links = True
+#             sa.cancel()
+#             frappe.db.commit()
+#             log(f"Step 5: SA {sa.name} cancelled successfully")
+#             frappe.msgprint(
+#                 f"✅ Sponsorship Allocation <b>{sa.name}</b> cancelled.",
+#                 alert=True, indicator="orange"
+#             )
+
+#     except Exception as e:
+#         log(f"Step 5 FAILED: {str(e)}")
+#         frappe.throw(f"Failed at Step 5 (Sponsorship Allocation): {str(e)}")
+
+#     frappe.msgprint(
+#         f"✅ Receipt Cancellation complete for <b>{sa.name}</b>.",
+#         title="Receipt Cancellation Complete",
+#         indicator="green"
+#     )
+
+
 def post_full_receipt_cancellation(doc):
     if not doc.sponsorship_allocation:
         frappe.throw("Sponsorship Allocation is required for Receipt Cancellation.")
@@ -942,7 +1321,7 @@ def post_full_receipt_cancellation(doc):
     sa            = frappe.get_doc("Sponsorship Allocation", doc.sponsorship_allocation)
     donation_name = sa.donation
 
-    # Step 1: Find and cancel ALL Payment Entries / JEs linked to the Donation
+    # Step 1: Find and cancel ALL JEs linked to the Donation
     try:
         pe_names = []
         if donation_name:
@@ -981,10 +1360,10 @@ def post_full_receipt_cancellation(doc):
             frappe.db.commit()
 
             for pe_name in pe_names:
-                # Could be a JE (from post_donation_journal_entry) or PE
                 if frappe.db.exists("Journal Entry", pe_name):
                     je = frappe.get_doc("Journal Entry", pe_name)
                     if je.docstatus == 1:
+                        je.flags.ignore_links = True
                         je.cancel()
                         frappe.db.commit()
                         log(f"Step 1: JE {pe_name} cancelled successfully")
@@ -1007,6 +1386,53 @@ def post_full_receipt_cancellation(doc):
         log(f"Step 1 FAILED: {str(e)}")
         frappe.throw(f"Failed at Step 1 (Payment Entry/JE): {str(e)}")
 
+    # Step 1b: Find and cancel any Reallocation Student Refunds linked to this SA
+    try:
+        reallocation_refunds = frappe.get_all(
+            "Student Refund",
+            filters={
+                "sponsorship_allocation": sa.name,
+                "action_type": "Reallocate to Student",
+                "docstatus": 1
+            },
+            fields=["name", "journal_entry"]
+        )
+
+        log(f"Step 1b: Found {len(reallocation_refunds)} reallocation refunds to cancel")
+
+        for sr in reallocation_refunds:
+            if sr.journal_entry:
+                # Clear the link FIRST before cancelling
+                frappe.db.set_value("Student Refund", sr.name, "journal_entry", None)
+                frappe.db.commit()
+
+                if frappe.db.exists("Journal Entry", sr.journal_entry):
+                    je = frappe.get_doc("Journal Entry", sr.journal_entry)
+                    if je.docstatus == 1:
+                        je.flags.ignore_links = True
+                        je.cancel()
+                        frappe.db.commit()
+                        log(f"Step 1b: Reallocation JE {sr.journal_entry} cancelled")
+                        frappe.msgprint(
+                            f"✅ Reallocation Journal Entry <b>{sr.journal_entry}</b> cancelled.",
+                            alert=True, indicator="orange"
+                        )
+
+            # Cancel the Student Refund itself
+            sr_doc = frappe.get_doc("Student Refund", sr.name)
+            sr_doc.flags.ignore_links = True
+            sr_doc.cancel()
+            frappe.db.commit()
+            log(f"Step 1b: Reallocation Student Refund {sr.name} cancelled")
+            frappe.msgprint(
+                f"✅ Reallocation Student Refund <b>{sr.name}</b> cancelled.",
+                alert=True, indicator="orange"
+            )
+
+    except Exception as e:
+        log(f"Step 1b FAILED: {str(e)}")
+        frappe.throw(f"Failed at Step 1b (Reallocation Refunds): {str(e)}")
+
     # Step 2: Cancel the Sponsorship Allocation JE
     try:
         if sa.journal_entry:
@@ -1016,6 +1442,7 @@ def post_full_receipt_cancellation(doc):
 
             je = frappe.get_doc("Journal Entry", je_name)
             if je.docstatus == 1:
+                je.flags.ignore_links = True
                 je.cancel()
                 frappe.db.commit()
                 log(f"Step 2: JE {je_name} cancelled successfully")
@@ -1046,6 +1473,7 @@ def post_full_receipt_cancellation(doc):
             donation.reload()
             log(f"Step 4: Donation docstatus before cancel: {donation.docstatus}")
             if donation.docstatus == 1:
+                donation.flags.ignore_links = True
                 donation.cancel()
                 frappe.db.commit()
                 log(f"Step 4: Donation {donation_name} cancelled successfully")
@@ -1096,7 +1524,7 @@ def post_full_receipt_cancellation(doc):
         indicator="green"
     )
 
-
+    
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
