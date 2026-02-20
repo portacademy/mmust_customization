@@ -598,9 +598,7 @@ def process_accounting(doc, method=None):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def post_donation_journal_entry(doc, method=None):
-    if frappe.db.get_value("Donation", doc.name, "payment_id"):
-        return  # Already has a payment linked, skip
-
+  
     company      = get_company()
     bank_account = get_bank_account(company)
     funding_account = get_funding_body_account(doc.donor)
