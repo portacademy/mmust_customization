@@ -600,8 +600,8 @@ def process_accounting(doc, method=None):
 def post_donation_journal_entry(doc, method=None):
   
     company      = get_company()
-    # bank_account = get_bank_account(company)
-    bank_account =  doc.bank_account
+    bank_account = get_bank_account(company)
+    bank_account = 
     funding_account = get_funding_body_account(doc.donor)
 
     amount = flt(doc.amount)

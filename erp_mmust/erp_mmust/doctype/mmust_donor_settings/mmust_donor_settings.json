@@ -6,6 +6,18 @@
     "track_changes": 1,
     "fields": [
         {
+            "fieldname": "bank_settings_section",
+            "label": "Bank Settings",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "default_payment_bank_account",
+            "label": "Default Payment Bank Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "description": "Default bank account used for sponsor refund disbursements"
+        },
+        {
             "fieldname": "donor_account_section",
             "label": "Donor GL Account Settings",
             "fieldtype": "Section Break"
