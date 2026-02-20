@@ -574,6 +574,37 @@ def post_full_receipt_cancellation(doc):
         frappe.throw(f"Failed at Step 4 (Donation): {str(e)}")
 
     # Step 5: Clear Student Refund → SA link FIRST, then cancel SA
+    # try:
+    #     frappe.db.set_value("Student Refund", doc.name, "cancelled_sponsorship_allocation", sa.name)
+    #     frappe.db.commit()
+    #     log(f"Step 5: Stored cancelled_sponsorship_allocation as {sa.name}")
+
+    #     frappe.db.set_value("Student Refund", doc.name, "sponsorship_allocation", None)
+    #     frappe.db.commit()
+    #     log(f"Step 5: Cleared sponsorship_allocation on Student Refund {doc.name}")
+
+    #     frappe.db.set_value("Sponsorship Allocation", sa.name, "journal_entry", None)
+    #     frappe.db.set_value("Sponsorship Allocation", sa.name, "donation", None)
+    #     frappe.db.commit()
+
+    #     sa.reload()
+    #     log(f"Step 5: SA docstatus before cancel: {sa.docstatus}")
+
+    #     if sa.docstatus == 1:
+    #         sa.flags.ignore_links = True
+    #         sa.cancel()
+    #         frappe.db.commit()
+    #         log(f"Step 5: SA {sa.name} cancelled successfully")
+    #         frappe.msgprint(
+    #             f"✅ Sponsorship Allocation <b>{sa.name}</b> cancelled.",
+    #             alert=True, indicator="orange"
+    #         )
+
+    # except Exception as e:
+    #     log(f"Step 5 FAILED: {str(e)}")
+    #     frappe.throw(f"Failed at Step 5 (Sponsorship Allocation): {str(e)}")
+
+    # Step 5: Clear Student Refund → SA link FIRST, then cancel SA
     try:
         frappe.db.set_value("Student Refund", doc.name, "cancelled_sponsorship_allocation", sa.name)
         frappe.db.commit()
@@ -592,13 +623,25 @@ def post_full_receipt_cancellation(doc):
 
         if sa.docstatus == 1:
             sa.flags.ignore_links = True
-            sa.cancel()
-            frappe.db.commit()
-            log(f"Step 5: SA {sa.name} cancelled successfully")
-            frappe.msgprint(
-                f"✅ Sponsorship Allocation <b>{sa.name}</b> cancelled.",
-                alert=True, indicator="orange"
-            )
+            sa.flags.ignore_permissions = True
+            sa.flags.ignore_validate_update_after_submit = True
+            try:
+                sa.cancel()
+                frappe.db.commit()
+                log(f"Step 5: SA {sa.name} cancelled successfully")
+                frappe.msgprint(
+                    f"✅ Sponsorship Allocation <b>{sa.name}</b> cancelled.",
+                    alert=True, indicator="orange"
+                )
+            except Exception as cancel_err:
+                log(f"Step 5: Normal cancel failed, forcing via db: {str(cancel_err)}")
+                frappe.db.set_value("Sponsorship Allocation", sa.name, "docstatus", 2)
+                frappe.db.commit()
+                log(f"Step 5: SA {sa.name} force-cancelled via db")
+                frappe.msgprint(
+                    f"✅ Sponsorship Allocation <b>{sa.name}</b> force-cancelled.",
+                    alert=True, indicator="orange"
+                )
 
     except Exception as e:
         log(f"Step 5 FAILED: {str(e)}")
