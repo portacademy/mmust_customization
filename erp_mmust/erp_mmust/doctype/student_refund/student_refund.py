@@ -135,6 +135,23 @@ class StudentRefund(Document):
         if self.request_type == "Hostel":
             self.total_amount = sum(flt(row.refundable_amount) for row in (self.items or []))
 
+    def validate_mandatory_fields(self):
+
+        if self.request_type in ('HELB', 'CDF', 'Scholarship'):
+            if not self.sponsorship_allocation:
+                frappe.throw(
+                    "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
+                    title="Missing Field"
+                )
+
+        if self.action_type == 'Refund to Funder' and \
+           self.request_type in ('HELB', 'CDF', 'Scholarship'):
+            if not self.bank_account:
+                frappe.throw(
+                    "Payment Bank Account is required for Refund to Funder.",
+                    title="Missing Field"
+                )
+
     # ─── REFUND TO FUNDER VALIDATIONS ────────────────────────────────────────
 
     def validate_beneficiaries(self):

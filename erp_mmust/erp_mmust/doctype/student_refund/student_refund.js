@@ -34,12 +34,12 @@ frappe.ui.form.on('Student Refund', {
 
     refresh: function (frm) {
 
-        if (!frm.doc.bank_account && frm.doc.action_type === 'Refund to Funder') {
-            frappe.db.get_single_value('MMUST Donor Settings', 'default_payment_bank_account')
-                .then(value => {
-                    if (value) frm.set_value('bank_account', value);
-                });
-        }
+        // if (!frm.doc.bank_account && frm.doc.action_type === 'Refund to Funder') {
+        //     frappe.db.get_single_value('MMUST Donor Settings', 'default_payment_bank_account')
+        //         .then(value => {
+        //             if (value) frm.set_value('bank_account', value);
+        //         });
+        // }
 
 
         frm.trigger('toggle_fields');
@@ -118,12 +118,12 @@ frappe.ui.form.on('Student Refund', {
     },
 
     action_type: function (frm) {
-        if (frm.doc.action_type === 'Refund to Funder' && !frm.doc.bank_account) {
-            frappe.db.get_single_value('MMUST Donor Settings', 'default_payment_bank_account')
-                .then(value => {
-                    if (value) frm.set_value('bank_account', value);
-                });
-        }
+        // if (frm.doc.action_type === 'Refund to Funder' && !frm.doc.bank_account) {
+        //     frappe.db.get_single_value('MMUST Donor Settings', 'default_payment_bank_account')
+        //         .then(value => {
+        //             if (value) frm.set_value('bank_account', value);
+        //         });
+        // }
 
         frm.trigger('toggle_fields');
         frm.trigger('add_print_cheque_button');
@@ -352,7 +352,7 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('amount_refunded_to_donor', is_refund);
 
         frm.toggle_display('bank_account', is_funder && is_refund);
-        frm.set_df_property('bank_account', 'reqd', is_funder && is_refund ? 1 : 0);
+        // frm.set_df_property('bank_account', 'reqd', is_funder && is_refund ? 1 : 0);
     }
 
 });

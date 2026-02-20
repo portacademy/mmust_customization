@@ -870,7 +870,8 @@ def post_refund_payment_entry(doc):
     company         = get_company()
     amount          = flt(doc.amount_refunded_to_donor)
     funding_account = get_funding_body_account(doc.funder)
-    bank_account    = get_bank_account(company)
+    # bank_account    = get_bank_account(company)
+    bank_account    = doc.bank_account
 
     if amount <= 0:
         frappe.throw("Amount Refunded to Donor is zero — cannot post disbursement.")
@@ -1524,7 +1525,7 @@ def post_full_receipt_cancellation(doc):
         indicator="green"
     )
 
-    
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────

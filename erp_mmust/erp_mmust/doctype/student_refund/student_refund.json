@@ -176,8 +176,7 @@
             "options": "Account",
             "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.action_type == 'Refund to Funder'",
             "description": "Bank account to pay the refunded money to the sponsor/funder",
-            "reqd": 0,
-            "read_only": 1
+            "reqd": 0
         },
         {
             "fieldname": "section_beneficiaries",
