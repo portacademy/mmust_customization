@@ -123,6 +123,7 @@ class StudentRefund(Document):
 
     def validate(self):
         self.calculate_total()
+        self.validate_mandatory_fields()
         
         if self.action_type == "Refund to Funder":
             self.validate_beneficiaries()

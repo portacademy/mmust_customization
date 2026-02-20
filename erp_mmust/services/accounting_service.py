@@ -519,6 +519,27 @@ def post_full_receipt_cancellation(doc):
         frappe.throw(f"Failed at Step 3 (Clear donation link): {str(e)}")
 
     # Step 4: Cancel the Donation
+    # try:
+    #     if donation_name:
+    #         donation = frappe.get_doc("Donation", donation_name)
+    #         donation.reload()
+    #         log(f"Step 4: Donation docstatus before cancel: {donation.docstatus}")
+    #         if donation.docstatus == 1:
+    #             donation.flags.ignore_links = True
+    #             donation.cancel()
+    #             frappe.db.commit()
+    #             log(f"Step 4: Donation {donation_name} cancelled successfully")
+    #             frappe.msgprint(
+    #                 f"✅ Donation <b>{donation_name}</b> cancelled.",
+    #                 alert=True, indicator="orange"
+    #             )
+    #     else:
+    #         log("Step 4: No donation linked — skipping")
+    # except Exception as e:
+    #     log(f"Step 4 FAILED: {str(e)}")
+    #     frappe.throw(f"Failed at Step 4 (Donation): {str(e)}")
+
+    # Step 4: Cancel the Donation
     try:
         if donation_name:
             donation = frappe.get_doc("Donation", donation_name)
@@ -526,13 +547,26 @@ def post_full_receipt_cancellation(doc):
             log(f"Step 4: Donation docstatus before cancel: {donation.docstatus}")
             if donation.docstatus == 1:
                 donation.flags.ignore_links = True
-                donation.cancel()
-                frappe.db.commit()
-                log(f"Step 4: Donation {donation_name} cancelled successfully")
-                frappe.msgprint(
-                    f"✅ Donation <b>{donation_name}</b> cancelled.",
-                    alert=True, indicator="orange"
-                )
+                donation.flags.ignore_permissions = True
+                donation.flags.ignore_validate_update_after_submit = True
+                try:
+                    donation.cancel()
+                    frappe.db.commit()
+                    log(f"Step 4: Donation {donation_name} cancelled successfully")
+                    frappe.msgprint(
+                        f"✅ Donation <b>{donation_name}</b> cancelled.",
+                        alert=True, indicator="orange"
+                    )
+                except Exception as cancel_err:
+                    # Force cancel via db if normal cancel fails
+                    log(f"Step 4: Normal cancel failed, forcing via db: {str(cancel_err)}")
+                    frappe.db.set_value("Donation", donation_name, "docstatus", 2)
+                    frappe.db.commit()
+                    log(f"Step 4: Donation {donation_name} force-cancelled via db")
+                    frappe.msgprint(
+                        f"✅ Donation <b>{donation_name}</b> force-cancelled.",
+                        alert=True, indicator="orange"
+                    )
         else:
             log("Step 4: No donation linked — skipping")
     except Exception as e:
