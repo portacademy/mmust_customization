@@ -1,0 +1,29 @@
+{
+    "doctype": "DocType",
+    "name": "Academic Year",
+    "module": "Erp Mmust",
+    "custom": 0,
+    "is_submittable": 0,
+    "track_changes": 1,
+    "autoname": "field:academic_year",
+    "title_field": "academic_year",
+    "fields": [
+        {
+            "fieldname": "academic_year",
+            "label": "Academic Year",
+            "fieldtype": "Data",
+            "reqd": 1,
+            "unique": 1,
+            "in_list_view": 1
+        }
+    ],
+    "permissions": [
+        {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1,
+            "delete": 1
+        }
+    ]
+}

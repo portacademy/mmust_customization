@@ -1,0 +1,65 @@
+{
+    "doctype": "DocType",
+    "name": "MMUST Donor Settings",
+    "module": "Erp Mmust",
+    "issingle": 1,
+    "track_changes": 1,
+    "fields": [
+        {
+            "fieldname": "bank_settings_section",
+            "label": "Bank Settings",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "default_payment_bank_account",
+            "label": "Default Payment Bank Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "description": "Default bank account used for sponsor refund disbursements"
+        },
+        {
+            "fieldname": "print_format_section",
+            "label": "Print Format Settings",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "refund_print_format",
+            "label": "Refund Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format",
+            "default": "Sponsorship Cheque Print Format"
+        },
+        {
+            "fieldname": "receipt_cancellation_print_format",
+            "label": "Receipt Cancellation Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format",
+            "default": "Sponsorship Receipt Cancellation Print Format"
+        },
+        {
+            "fieldname": "col_break_print",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "reallocation_print_format",
+            "label": "Reallocation Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format",
+            "default": "Reallocation Receipt Print Format"
+        }
+    ],
+    "permissions": [
+        {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        },
+        {
+            "role": "Accounts Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        }
+    ]
+}

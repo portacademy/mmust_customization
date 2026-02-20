@@ -1,0 +1,351 @@
+{
+    "actions": [],
+    "autoname": "naming_series:",
+    "creation": "2026-02-16 14:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "naming_series",
+        "donor",
+        "donor_name",
+        "custom_constituency_code",
+        "column_break_4",
+        "company",
+        "date",
+        "email",
+        "donation_details_section",
+        "donation",
+        "amount",
+        "custom_cheque_id",
+        "column_break_8",
+        "receipt_no",
+        "payment_id",
+        "allocation_details_section",
+        "invoice_type",
+        "financial_aid",
+        "column_break_14",
+        "account_debited",
+        "refund",
+        "beneficiary_selection_section",
+        "selection_method",
+        "column_break_25",
+        "filter_by_programme",
+        "filter_by_level",
+        "section_break_28",
+        "csv_upload",
+        "upload_csv",
+        "section_break_30",
+        "get_students_button",
+        "financial_summary_section",
+        "total",
+        "column_break_19",
+        "balance",
+        "total_allocated",
+        "beneficiaries_section",
+        "beneficiaries",
+        "amended_from",
+        "journal_entry"
+    ],
+    "fields": [
+        {
+            "fieldname": "naming_series",
+            "fieldtype": "Select",
+            "label": "Series",
+            "options": "NPO-SPA-.YYYY.-",
+            "reqd": 1
+        },
+        {
+            "fieldname": "donor",
+            "fieldtype": "Link",
+            "label": "Donor",
+            "options": "Donor",
+            "reqd": 1
+        },
+        {
+            "fetch_from": "donor.donor_name",
+            "fieldname": "donor_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Donor Name",
+            "read_only": 1
+        },
+        {
+            "fetch_from": "donor.custom_constituency_code",
+            "fieldname": "custom_constituency_code",
+            "fieldtype": "Data",
+            "label": "Constituency Code",
+            "read_only": 1,
+            "depends_on": "eval:doc.custom_constituency_code"
+        },
+        {
+            "fetch_from": "donor.email",
+            "fieldname": "email",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Email",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_4",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "company",
+            "fieldtype": "Link",
+            "label": "Company",
+            "options": "Company",
+            "reqd": 1
+        },
+        {
+            "fieldname": "date",
+            "fieldtype": "Date",
+            "label": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "donation_details_section",
+            "fieldtype": "Section Break",
+            "label": "Donation Details"
+        },
+        {
+            "fieldname": "donation",
+            "fieldtype": "Link",
+            "label": "Donation",
+            "options": "Donation"
+        },
+        {
+            "depends_on": "donation",
+            "fetch_from": "donation.amount",
+            "fieldname": "amount",
+            "fieldtype": "Currency",
+            "label": "Donation Amount",
+            "read_only": 1
+        },
+        {
+            "fetch_from": "donation.custom_cheque_id",
+            "fieldname": "custom_cheque_id",
+            "fieldtype": "Data",
+            "label": "Cheque ID",
+            "read_only": 1,
+            "depends_on": "eval:doc.custom_cheque_id"
+        },
+        {
+            "fieldname": "column_break_8",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "receipt_no",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Receipt No",
+            "reqd": 0,
+            "read_only": 1
+        },
+        {
+            "fieldname": "payment_id",
+            "fieldtype": "Data",
+            "label": "Payment ID"
+        },
+        {
+            "fieldname": "allocation_details_section",
+            "fieldtype": "Section Break",
+            "label": "Allocation Details"
+        },
+        {
+            "fieldname": "invoice_type",
+            "fieldtype": "Select",
+            "label": "Invoice Type",
+            "options": "\nHouse Hold\nScholarship Fee\nLoan Fee",
+            "reqd": 1
+        },
+        {
+            "fieldname": "financial_aid",
+            "fieldtype": "Data",
+            "label": "Financial Aid",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_14",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "account_debited",
+            "fieldtype": "Link",
+            "label": "Sponsor Account to be Debited",
+            "options": "Account",
+            "reqd": 1,
+            "read_only": 1,
+            "fetch_from": "donor.custom_sponsor_gl_account"
+        },
+        {
+            "fieldname": "refund",
+            "fieldtype": "Data",
+            "label": "Refund"
+        },
+        {
+            "fieldname": "beneficiary_selection_section",
+            "fieldtype": "Section Break",
+            "label": "Beneficiary Selection"
+        },
+        {
+            "fieldname": "selection_method",
+            "fieldtype": "Select",
+            "label": "Selection Method",
+            "options": "\nManual Selection\nFilter by Programme/Level\nCSV Upload",
+            "default": "Manual Selection"
+        },
+        {
+            "fieldname": "column_break_25",
+            "fieldtype": "Column Break"
+        },
+        {
+            "depends_on": "eval:doc.selection_method=='Filter by Programme/Level'",
+            "fieldname": "filter_by_programme",
+            "fieldtype": "Link",
+            "label": "Filter by Programme",
+            "options": "Programme"
+        },
+        {
+            "depends_on": "eval:doc.selection_method=='Filter by Programme/Level'",
+            "fieldname": "filter_by_level",
+            "fieldtype": "Link",
+            "label": "Filter by Level",
+            "options": "Student Level"
+        },
+        {
+            "collapsible": 1,
+            "depends_on": "eval:doc.selection_method=='CSV Upload'",
+            "fieldname": "section_break_28",
+            "fieldtype": "Section Break",
+            "label": "CSV Upload Instructions"
+        },
+        {
+            "depends_on": "eval:doc.selection_method=='CSV Upload'",
+            "fieldname": "csv_upload",
+            "fieldtype": "HTML",
+            "label": "CSV Upload",
+            "options": "<div class='alert alert-info'>Upload a CSV file with column: <strong>customer_id</strong><br>Example:<br><code>customer_id<br>CUST-00001<br>CUST-00002</code></div>"
+        },
+        {
+            "depends_on": "eval:doc.selection_method=='CSV Upload'",
+            "fieldname": "upload_csv",
+            "fieldtype": "Attach",
+            "label": "Upload CSV File"
+        },
+        {
+            "depends_on": "eval:doc.selection_method!='Manual Selection'",
+            "fieldname": "section_break_30",
+            "fieldtype": "Section Break"
+        },
+        {
+            "depends_on": "eval:doc.selection_method=='Filter by Programme/Level'",
+            "fieldname": "get_students_button",
+            "fieldtype": "Button",
+            "label": "Get Students"
+        },
+        {
+            "fieldname": "financial_summary_section",
+            "fieldtype": "Section Break",
+            "label": "Financial Summary"
+        },
+        {
+            "fieldname": "total",
+            "fieldtype": "Currency",
+            "label": "Total Available",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_19",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "total_allocated",
+            "fieldtype": "Currency",
+            "label": "Total Allocated",
+            "read_only": 1
+        },
+        {
+            "fieldname": "balance",
+            "fieldtype": "Currency",
+            "label": "Balance",
+            "read_only": 1
+        },
+        {
+            "fieldname": "beneficiaries_section",
+            "fieldtype": "Section Break",
+            "label": "Beneficiaries"
+        },
+        {
+            "fieldname": "beneficiaries",
+            "fieldtype": "Table",
+            "label": "Beneficiaries",
+            "options": "Sponsorship Allocation Beneficiary"
+        },
+        {
+            "fieldname": "amended_from",
+            "fieldtype": "Link",
+            "label": "Amended From",
+            "no_copy": 1,
+            "options": "Sponsorship Allocation",
+            "print_hide": 1,
+            "read_only": 1
+        },
+        {
+            "fieldname": "journal_entry",
+            "fieldtype": "Link",
+            "label": "Journal Entry",
+            "options": "Journal Entry",
+            "read_only": 1,
+            "no_copy": 1,
+            "print_hide": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "is_submittable": 1,
+    "links": [],
+    "modified": "2026-02-16 15:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Erp Mmust",
+    "name": "Sponsorship Allocation",
+    "naming_rule": "By \"Naming Series\" field",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "select": 1,
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "Non Profit Manager",
+            "select": 1,
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "search_fields": "donor_name, email, receipt_no",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "title_field": "donor_name",
+    "track_changes": 1
+}

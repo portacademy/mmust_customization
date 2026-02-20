@@ -1,0 +1,57 @@
+{
+    "doctype": "DocType",
+    "name": "Student Refund Beneficiary",
+    "module": "Erp Mmust",
+    "custom": 0,
+    "istable": 1,
+    "editable_grid": 1,
+    "track_changes": 0,
+    "fields": [
+        {
+            "fieldname": "student",
+            "label": "Student (Customer)",
+            "fieldtype": "Link",
+            "options": "Customer",
+            "reqd": 1,
+            "in_list_view": 1,
+            "read_only": 1,
+            "columns": 2
+        },
+        {
+            "fieldname": "student_name",
+            "label": "Student Name",
+            "fieldtype": "Data",
+            "fetch_from": "student.customer_name",
+            "read_only": 1,
+            "in_list_view": 1,
+            "columns": 2
+        },
+        {
+            "fieldname": "original_allocated_amount",
+            "label": "Original Allocated Amount",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "in_list_view": 1,
+            "columns": 2,
+            "description": "Amount originally allocated to this student in the Sponsorship Allocation"
+        },
+        {
+            "fieldname": "student_balance",
+            "label": "Student Balance",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "in_list_view": 1,
+            "columns": 2,
+            "description": "Current balance in the student's account ledger (GL Entry)"
+        },
+        {
+            "fieldname": "amount_to_be_refunded",
+            "label": "Amount to be Refunded",
+            "fieldtype": "Currency",
+            "reqd": 1,
+            "in_list_view": 1,
+            "columns": 2,
+            "description": "Amount to refund for this student. Cannot exceed Original Allocated Amount."
+        }
+    ]
+}

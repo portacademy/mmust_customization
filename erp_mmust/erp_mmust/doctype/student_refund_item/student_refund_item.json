@@ -1,0 +1,85 @@
+{
+    "doctype": "DocType",
+    "name": "Student Refund Item",
+    "module": "Erp Mmust",
+    "custom": 0,
+    "istable": 1,
+    "track_changes": 1,
+    "fields": [
+        {
+            "fieldname": "reference_doctype",
+            "label": "Reference Doctype",
+            "fieldtype": "Link",
+            "options": "DocType",
+            "reqd": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "reference_name",
+            "label": "Reference Name",
+            "fieldtype": "Dynamic Link",
+            "options": "reference_doctype",
+            "reqd": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "original_amount",
+            "label": "Original Amount",
+            "fieldtype": "Currency",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "refundable_amount",
+            "label": "Refundable Amount",
+            "fieldtype": "Currency",
+            "reqd": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "selected",
+            "label": "Selected",
+            "fieldtype": "Check",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "debit_account",
+            "label": "Debit Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "read_only": 1,
+            "in_list_view": 0
+        },
+        {
+            "fieldname": "credit_account",
+            "label": "Credit Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "read_only": 1,
+            "in_list_view": 0
+        },
+        {
+            "fieldname": "journal_entry",
+            "label": "Journal Entry",
+            "fieldtype": "Link",
+            "options": "Journal Entry",
+            "read_only": 1,
+            "in_list_view": 0
+        },
+        {
+            "fieldname": "payment_entry",
+            "label": "Payment Entry",
+            "fieldtype": "Link",
+            "options": "Payment Entry",
+            "read_only": 1,
+            "in_list_view": 0
+        },
+        {
+            "fieldname": "status_override",
+            "label": "Status Override",
+            "fieldtype": "Select",
+            "options": "\nPending\nApproved\nRejected\nClosed",
+            "read_only": 1,
+            "in_list_view": 0
+        }
+    ]
+}

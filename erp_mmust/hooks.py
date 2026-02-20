@@ -247,3 +247,40 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+
+# doc_events = {
+#     "Student Refund": {
+#         "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting"
+#     }
+# }
+
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            ["name", "in", [
+                "Donor-custom_constituency_code",
+                "Donor-custom_sponsor_gl_account",
+                "Donation-custom_cheque_id"
+            ]]
+        ]
+    }
+]
+
+
+doc_events = {
+    "Student Refund": {
+        "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting"
+    },
+    "Donation": {
+    "on_submit": "erp_mmust.services.accounting_service.post_donation_journal_entry"
+    },
+    "Donor": {
+        "on_update": "erp_mmust.services.donor_service.create_donor_gl_account"
+    }
+}
+
+
+
+
