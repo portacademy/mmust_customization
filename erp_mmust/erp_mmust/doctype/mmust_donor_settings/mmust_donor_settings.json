@@ -18,6 +18,18 @@
             "description": "Default bank account used for sponsor refund disbursements"
         },
         {
+            "fieldname": "donor_account_section",
+            "label": "Donor GL Account Settings",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "default_sponsor_parent_account",
+            "label": "Default Sponsor Parent Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "description": "Parent account under which new donor GL accounts will be created automatically"
+        },
+        {
             "fieldname": "print_format_section",
             "label": "Print Format Settings",
             "fieldtype": "Section Break"
