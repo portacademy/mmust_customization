@@ -155,19 +155,19 @@ def get_students_by_filter(programme=None, level=None):
 	filters = {
 		"customer_group": "Student"
 	}
-	
+
 	if programme:
-		filters["programme"] = programme
-	
+		filters["custom_program_of_study"] = programme
+
 	if level:
 		filters["level"] = level
-	
+
 	students = frappe.get_all(
 		"Customer",
 		filters=filters,
-		fields=["name", "customer_name", "programme", "level"]
+		fields=["name", "customer_name", "custom_program_of_study", "level"],
 	)
-	
+
 	return students
 
 
