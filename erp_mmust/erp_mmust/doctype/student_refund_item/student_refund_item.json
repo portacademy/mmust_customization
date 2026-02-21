@@ -3,83 +3,70 @@
     "name": "Student Refund Item",
     "module": "Erp Mmust",
     "custom": 0,
+    "editable_grid": 1,
     "istable": 1,
     "track_changes": 1,
     "fields": [
         {
-            "fieldname": "reference_doctype",
-            "label": "Reference Doctype",
+            "fieldname": "sales_invoice",
+            "label": "Sales Invoice",
             "fieldtype": "Link",
-            "options": "DocType",
+            "options": "Sales Invoice",
             "reqd": 1,
             "in_list_view": 1
         },
         {
-            "fieldname": "reference_name",
-            "label": "Reference Name",
-            "fieldtype": "Dynamic Link",
-            "options": "reference_doctype",
-            "reqd": 1,
+            "fieldname": "customer_name",
+            "label": "Customer Name",
+            "fieldtype": "Data",
+            "fetch_from": "sales_invoice.customer_name",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "custom_semester",
+            "label": "Semester",
+            "fieldtype": "Data",
+            "fetch_from": "sales_invoice.custom_semester",
+            "read_only": 1
+        },
+        {
+            "fieldname": "custom_level",
+            "label": "Level",
+            "fieldtype": "Data",
+            "fetch_from": "sales_invoice.custom_level",
+            "read_only": 1
+        },
+        {
+            "fieldname": "custom_session",
+            "label": "Session",
+            "fieldtype": "Data",
+            "fetch_from": "sales_invoice.custom_session",
+            "read_only": 1,
             "in_list_view": 1
         },
         {
             "fieldname": "original_amount",
-            "label": "Original Amount",
+            "label": "Invoice Amount",
             "fieldtype": "Currency",
+            "fetch_from": "sales_invoice.grand_total",
+            "read_only": 1,
             "in_list_view": 1
         },
         {
             "fieldname": "refundable_amount",
-            "label": "Refundable Amount",
+            "label": "Amount Due for Refund",
             "fieldtype": "Currency",
             "reqd": 1,
             "in_list_view": 1
         },
         {
-            "fieldname": "selected",
-            "label": "Selected",
-            "fieldtype": "Check",
+            "fieldname": "credit_note",
+            "label": "Credit Note",
+            "fieldtype": "Link",
+            "options": "Sales Invoice",
+            "read_only": 1,
             "in_list_view": 1
-        },
-        {
-            "fieldname": "debit_account",
-            "label": "Debit Account",
-            "fieldtype": "Link",
-            "options": "Account",
-            "read_only": 1,
-            "in_list_view": 0
-        },
-        {
-            "fieldname": "credit_account",
-            "label": "Credit Account",
-            "fieldtype": "Link",
-            "options": "Account",
-            "read_only": 1,
-            "in_list_view": 0
-        },
-        {
-            "fieldname": "journal_entry",
-            "label": "Journal Entry",
-            "fieldtype": "Link",
-            "options": "Journal Entry",
-            "read_only": 1,
-            "in_list_view": 0
-        },
-        {
-            "fieldname": "payment_entry",
-            "label": "Payment Entry",
-            "fieldtype": "Link",
-            "options": "Payment Entry",
-            "read_only": 1,
-            "in_list_view": 0
-        },
-        {
-            "fieldname": "status_override",
-            "label": "Status Override",
-            "fieldtype": "Select",
-            "options": "\nPending\nApproved\nRejected\nClosed",
-            "read_only": 1,
-            "in_list_view": 0
         }
     ]
 }

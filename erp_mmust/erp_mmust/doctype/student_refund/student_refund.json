@@ -4,6 +4,7 @@
     "module": "Erp Mmust",
     "custom": 0,
     "is_submittable": 1,
+    "editable_grid": 1,
     "track_changes": 1,
     "autoname": "SRF-.YYYY.-.#####",
     "title_field": "request_type",
@@ -27,7 +28,7 @@
             "fieldname": "action_type",
             "label": "Action Type",
             "fieldtype": "Select",
-            "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation",
+            "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation\nHostel Refund",
             "reqd": 1,
             "in_list_view": 1,
             "in_standard_filter": 1
@@ -218,6 +219,44 @@
             "fieldtype": "Table",
             "options": "Student Refund Cancellation Beneficiary",
             "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.sponsorship_allocation || doc.cancelled_sponsorship_allocation) && doc.action_type == 'Receipt Cancellation'"
+        },
+        {
+            "fieldname": "section_hostel_details",
+            "label": "Hostel Details",
+            "fieldtype": "Section Break",
+            "depends_on": "eval:doc.request_type == 'Hostel'"
+        },
+        {
+            "fieldname": "source_student",
+            "label": "Student",
+            "fieldtype": "Link",
+            "options": "Customer",
+            "depends_on": "eval:doc.request_type == 'Hostel'"
+        },
+        {
+            "fieldname": "hostel_session",
+            "label": "Session Filter",
+            "fieldtype": "Data",
+            "depends_on": "eval:doc.request_type == 'Hostel'",
+            "description": "e.g. 2025/2026 — filters invoice list"
+        },
+        {
+            "fieldname": "hostel_semester",
+            "label": "Semester Filter",
+            "fieldtype": "Data",
+            "depends_on": "eval:doc.request_type == 'Hostel'",
+            "description": "e.g. Semester 1 — filters invoice list"
+        },
+        {
+            "fieldname": "col_break_hostel",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "narration",
+            "label": "Narration",
+            "fieldtype": "Small Text",
+            "depends_on": "eval:doc.request_type == 'Hostel'",
+            "description": "Hostel Officer narration on stay status, room condition, and days occupied"
         },
         {
             "fieldname": "section_items",

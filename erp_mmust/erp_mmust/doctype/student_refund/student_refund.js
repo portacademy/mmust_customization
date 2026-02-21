@@ -26,10 +26,41 @@ frappe.ui.form.on('Student Refund', {
             return {
                 filters: {
                     account_type: 'Bank',
+                    is_group: 0,
                     company: frappe.defaults.get_user_default('company')
                 }
             };
         });
+        frm.set_query('sales_invoice', 'items', function () {  // no (frm, cdt, cdn) here
+            return {
+                query: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_hostel_invoices',
+                filters: {
+                    customer: frm.doc.source_student || '',
+                    custom_session: frm.doc.hostel_session || '',
+                    custom_semester: frm.doc.hostel_semester || ''
+                }
+            };
+        });
+        frm.set_query('source_student', function () {
+            return {
+                filters: {
+                    customer_group: 'Student'
+                }
+            };
+        });
+    },
+
+    source_student: function (frm) {
+        frm.clear_table('items');
+        frm.refresh_field('items');
+    },
+
+    hostel_session: function (frm) {
+        frm.refresh_field('items');
+    },
+
+    hostel_semester: function (frm) {
+        frm.refresh_field('items');
     },
 
     refresh: function (frm) {
@@ -353,6 +384,12 @@ frappe.ui.form.on('Student Refund', {
 
         frm.toggle_display('bank_account', is_funder && is_refund);
         // frm.set_df_property('bank_account', 'reqd', is_funder && is_refund ? 1 : 0);
+
+        frm.toggle_display('section_hostel_details', is_hostel);
+        frm.toggle_display('source_student', is_hostel);
+        frm.toggle_display('hostel_session', is_hostel);
+        frm.toggle_display('hostel_semester', is_hostel);
+        frm.toggle_display('narration', is_hostel);
     }
 
 });
@@ -488,16 +525,81 @@ frappe.ui.form.on('Student Refund Reallocation', {
 
 // ─── CHILD TABLE — Student Refund Item (Hostel) ──────────────────────────────
 
+// frappe.ui.form.on('Student Refund Item', {
+//     refundable_amount: function (frm) {
+//         let total = 0;
+//         (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
+//         frm.set_value('total_amount', total);
+//         frm.refresh_field('total_amount');
+//     },
+//     items_remove: function (frm) {
+//         let total = 0;
+//         (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
+//         frm.set_value('total_amount', total);
+//     }
+// });
+
+
 frappe.ui.form.on('Student Refund Item', {
+    sales_invoice: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (!row.sales_invoice) return;
+
+        frappe.call({
+            method: 'frappe.client.get',
+            args: { doctype: 'Sales Invoice', name: row.sales_invoice },
+            callback: function (r) {
+                if (!r.message) return;
+                let si = r.message;
+                frappe.model.set_value(cdt, cdn, 'original_amount', si.grand_total);
+                frappe.model.set_value(cdt, cdn, 'customer_name', si.customer_name);
+                frappe.model.set_value(cdt, cdn, 'custom_semester', si.custom_semester || '');
+                frappe.model.set_value(cdt, cdn, 'custom_level', si.custom_level || '');
+                frappe.model.set_value(cdt, cdn, 'custom_session', si.custom_session || '');
+            }
+        });
+    },
+
     refundable_amount: function (frm) {
         let total = 0;
-        (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
+        (frm.doc.items || []).forEach(row => {
+            total += flt(row.refundable_amount || 0);
+        });
         frm.set_value('total_amount', total);
         frm.refresh_field('total_amount');
     },
+
     items_remove: function (frm) {
         let total = 0;
-        (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
+        (frm.doc.items || []).forEach(row => {
+            total += flt(row.refundable_amount || 0);
+        });
         frm.set_value('total_amount', total);
-    }
+    },
+
+    refundable_amount: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        let original = flt(row.original_amount);
+        let refundable = flt(row.refundable_amount);
+
+        if (refundable > original && original > 0) {
+            frappe.msgprint({
+                title: 'Validation Error',
+                indicator: 'red',
+                message: `<b>${row.customer_name || 'Row ' + row.idx}</b>: 
+                    Amount Due for Refund (<b>${format_currency(refundable)}</b>) 
+                    cannot exceed Invoice Amount (<b>${format_currency(original)}</b>).`
+            });
+            frappe.model.set_value(cdt, cdn, 'refundable_amount', original);
+            return;
+        }
+
+        // recalculate total
+        let total = 0;
+        (frm.doc.items || []).forEach(r => {
+            total += flt(r.refundable_amount || 0);
+        });
+        frm.set_value('total_amount', total);
+        frm.refresh_field('total_amount');
+    },
 });

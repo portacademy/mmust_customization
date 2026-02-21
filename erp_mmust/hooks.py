@@ -272,7 +272,8 @@ fixtures = [
 
 doc_events = {
     "Student Refund": {
-        "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting"
+        "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting",
+        "before_update_after_submit": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.before_update_after_submit"
     },
     "Donation": {
     "on_submit": "erp_mmust.services.accounting_service.post_donation_journal_entry"

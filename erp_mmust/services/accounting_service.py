@@ -11,7 +11,12 @@ def process_accounting(doc, method=None):
 
     state = doc.workflow_state
 
-    if state == "Receipt Cancelled" and doc.action_type == "Refund to Funder":
+    frappe.log_error(
+        title="process_accounting debug",
+        message=f"doc: {doc.name} | state: '{state}' | request_type: '{doc.request_type}' | action_type: '{doc.action_type}'"
+    )
+
+    if state ==  "Pending PV" and doc.action_type == "Refund to Funder":
         post_receipt_cancellation(doc)
     elif state == "Closed" and doc.action_type == "Reallocate to Student":
         post_reallocation_journal_entry(doc)
@@ -19,6 +24,8 @@ def process_accounting(doc, method=None):
         post_refund_payment_entry(doc)
     elif state == "Receipt Cancelled" and doc.action_type == "Receipt Cancellation":
         post_full_receipt_cancellation(doc)
+    elif state == "Hostel Closed" and doc.request_type == "Hostel":
+        post_hostel_credit_note(doc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -652,6 +659,83 @@ def post_full_receipt_cancellation(doc):
         title="Receipt Cancellation Complete",
         indicator="green"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HOSTEL — Credit Note on Approval
+# ─────────────────────────────────────────────────────────────────────────────
+
+def post_hostel_credit_note(doc):
+    if doc.request_type != "Hostel":
+        return
+
+    if not doc.items:
+        frappe.throw("No items found. Cannot post Hostel Credit Note.")
+
+    company  = get_company()
+    currency = get_currency()
+
+    for row in doc.items:
+        if not row.sales_invoice or not flt(row.refundable_amount) > 0:
+            continue
+
+        if row.credit_note:
+            continue  # already posted
+
+        si = frappe.get_doc("Sales Invoice", row.sales_invoice)
+
+        cn = frappe.new_doc("Sales Invoice")
+        cn.is_return     = 1
+        # cn.return_against = row.sales_invoice
+        cn.update_outstanding_for_self = 0
+        cn.customer      = si.customer
+        cn.company       = company
+        cn.posting_date  = nowdate()
+        cn.due_date      = nowdate()
+        cn.title         = f"Credit Note - {doc.name}"
+        cn.pay_to_recd_from = si.customer_name
+
+        # Copy custom fields if present
+        for field in ["custom_semester", "custom_level", "custom_session"]:
+            if frappe.db.has_column("Sales Invoice", field):
+                cn.set(field, si.get(field))
+
+        # Proportional credit based on refundable vs original
+        ratio = flt(row.refundable_amount) / flt(si.grand_total) if flt(si.grand_total) else 1
+
+        for item in si.items:
+            cn.append("items", {
+                "item_code":      item.item_code,
+                "item_name":      item.item_name,
+                "qty":            -1,
+                "rate":           flt(row.refundable_amount),
+                "income_account": item.income_account,
+                "cost_center":    item.cost_center,
+                "description":    (
+                    f"Credit Note for {doc.name} | "
+                    f"Narration: {doc.narration or 'N/A'}"
+                )
+            })
+
+        cn.insert(ignore_permissions=True)
+        cn.submit()
+
+        frappe.db.set_value("Student Refund Item", row.name, "credit_note", cn.name)
+        frappe.db.commit()
+
+        frappe.msgprint(
+            f"✅ Credit Note <b>{cn.name}</b> created against <b>{row.sales_invoice}</b><br>"
+            f"Customer: <b>{si.customer_name}</b><br>"
+            f"Amount: <b>{currency} {flt(row.refundable_amount):,.2f}</b>",
+            alert=True, indicator="green"
+        )
+
+    frappe.msgprint(
+        f"✅ Hostel Credit Notes posted for <b>{doc.name}</b>.",
+        title="Hostel Credit Notes Complete",
+        indicator="green"
+    )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

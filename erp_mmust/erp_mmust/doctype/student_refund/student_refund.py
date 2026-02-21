@@ -123,6 +123,8 @@ class StudentRefund(Document):
 
     def validate(self):
         self.calculate_total()
+        if self.docstatus == 1:
+            return
         self.validate_mandatory_fields()
         
         if self.action_type == "Refund to Funder":
@@ -131,6 +133,8 @@ class StudentRefund(Document):
         elif self.action_type == "Reallocate to Student":
             self.validate_reallocations()
             self.calculate_reallocation_total()
+        elif self.request_type == "Hostel":
+            self.validate_hostel_items()
 
     def calculate_total(self):
         if self.request_type == "Hostel":
@@ -160,6 +164,13 @@ class StudentRefund(Document):
             return
         if not self.beneficiaries:
             return
+        
+        has_any_refund = any(flt(row.amount_to_be_refunded) > 0 for row in self.beneficiaries)
+        if not has_any_refund:
+            frappe.throw(
+                "At least one beneficiary must have an Amount to be Refunded greater than zero.",
+                title="Missing Refund Amount"
+            )
 
         total_to_refund = 0
 
@@ -223,6 +234,13 @@ class StudentRefund(Document):
             return
         if not self.reallocations:
             return
+        
+        has_any_reallocation = any(flt(row.amount_to_reallocate) > 0 for row in self.reallocations)
+        if not has_any_reallocation:
+            frappe.throw(
+                "At least one row must have an Amount to Reallocate greater than zero.",
+                title="Missing Reallocation Amount"
+            )
 
         total_to_reallocate = 0
 
@@ -319,6 +337,32 @@ class StudentRefund(Document):
             pe = frappe.get_doc("Payment Entry", self.payment_entry)
             if pe.docstatus == 1:
                 pe.cancel()
+
+    
+    def validate_hostel_items(self):
+        if self.request_type != "Hostel":
+            return
+        if not self.items:
+            return
+
+        for row in self.items:
+            if not row.sales_invoice:
+                continue
+            original = flt(row.original_amount)
+            refundable = flt(row.refundable_amount)
+
+            if refundable <= 0:
+                frappe.throw(
+                    f"Row {row.idx} — <b>{row.customer_name}</b>: "
+                    f"Amount Due for Refund must be greater than zero."
+                )
+
+            if refundable > original:
+                frappe.throw(
+                    f"Row {row.idx} — <b>{row.customer_name}</b>: "
+                    f"Amount Due for Refund (<b>{refundable:,.2f}</b>) cannot exceed "
+                    f"Invoice Amount (<b>{original:,.2f}</b>)."
+                )
 
 
 
@@ -437,3 +481,62 @@ def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filt
         LIMIT %s OFFSET %s
     """, values)
 
+
+
+
+
+@frappe.whitelist()
+def get_hostel_invoices(doctype, txt, searchfield, start, page_len, filters):
+    customer = filters.get("customer") or ""
+    session  = filters.get("custom_session") or ""
+    semester = filters.get("custom_semester") or ""
+
+    conditions = [
+        "si.docstatus = 1",
+        "si.outstanding_amount >= 0",
+        "si.is_return = 0",
+        "si.status IN ('Paid', 'Partly Paid')",
+        "si.custom_desc LIKE %s"
+    ]
+    values = ["%Accommodation Fee%"]
+
+    if customer:
+        conditions.append("si.customer = %s")
+        values.append(customer)
+
+    if session:
+        conditions.append("si.custom_session LIKE %s")
+        values.append(f"%{session}%")
+
+    if semester:
+        conditions.append("si.custom_semester LIKE %s")
+        values.append(f"%{semester}%")
+
+    if txt:
+        conditions.append("""
+            (si.name LIKE %s
+            OR si.customer_name LIKE %s
+            OR si.custom_session LIKE %s
+            OR si.custom_semester LIKE %s
+            OR si.custom_level LIKE %s)
+        """)
+        values += [f"%{txt}%"] * 5
+
+    where_clause = " AND ".join(conditions)
+
+    return frappe.db.sql(f"""
+        SELECT
+            si.name,
+            si.customer_name,
+            si.custom_session,
+            si.custom_semester,
+            si.grand_total
+        FROM `tabSales Invoice` si
+        WHERE {where_clause}
+        ORDER BY si.posting_date DESC
+        LIMIT %s OFFSET %s
+    """, values + [int(page_len), int(start)])
+
+
+def before_update_after_submit(self, method=None):
+    self.flags.ignore_mandatory = True
