@@ -283,6 +283,9 @@ doc_events = {
     }
 }
 
+override_doctype_dashboards = {
+    "Donation": "erp_mmust.overrides.donation_dashboard.get_data"
+}
 
 
 
