@@ -145,11 +145,6 @@
             "read_only": 1
         },
         {
-            "fieldname": "payment_id",
-            "fieldtype": "Data",
-            "label": "Payment ID"
-        },
-        {
             "fieldname": "allocation_details_section",
             "fieldtype": "Section Break",
             "label": "Allocation Details"

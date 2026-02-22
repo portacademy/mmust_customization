@@ -281,3 +281,11 @@ def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
         'page_len': page_len,
         'start': start
     })
+
+@frappe.whitelist()
+def get_beneficiary_for_print(docname, student):
+    doc = frappe.get_doc("Sponsorship Allocation", docname)
+    for row in doc.beneficiaries:
+        if row.student == student:
+            return row.as_dict()
+    frappe.throw(f"Beneficiary {student} not found in {docname}")

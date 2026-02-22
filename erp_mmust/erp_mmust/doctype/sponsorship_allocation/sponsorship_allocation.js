@@ -2,22 +2,182 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Sponsorship Allocation', {
-    refresh: function (frm) {
+    // refresh: function (frm) {
 
+    //     frm.set_df_property('donation', 'read_only', frm.doc.donor ? 0 : 1);
+
+    //     // Set donation filter if donor already selected
+    //     if (frm.doc.donor) {
+    //         return {
+    //             query: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.get_donor_donations',
+    //             filters: { donor: frm.doc.donor }
+    //         };
+    //     }
+
+    //     // Add custom buttons or actions here
+    //     if (frm.doc.docstatus === 0 && frm.doc.total_allocated !== frm.doc.total) {
+    //         frm.add_custom_button(__('Distribute Equally'), function () {
+    //             distribute_equally(frm);
+    //         });
+    //     }
+
+    //     if (frm.doc.docstatus === 1) {
+
+    //         frm.add_custom_button(__('Print Single Receipt'), function () {
+    //             frappe.db.get_single_value('MMUST Donor Settings', 'single_sponsorship_print_format')
+    //                 .then(print_format => {
+    //                     if (!print_format) {
+    //                         frappe.msgprint(__('No Single Sponsorship Print Format set in MMUST Donor Settings.'));
+    //                         return;
+    //                     }
+    //                     const url = frappe.urllib.get_full_url(
+    //                         `/printview?doctype=Sponsorship Allocation&name=${frm.doc.name}&format=${print_format}&no_letterhead=0`
+    //                     );
+    //                     window.open(url, '_blank');
+    //                 });
+    //         }, __('Print'));
+
+    //         frm.add_custom_button(__('Print Bulk Receipt'), function () {
+    //             frappe.db.get_single_value('MMUST Donor Settings', 'bulk_sponsorship_print_format')
+    //                 .then(print_format => {
+    //                     if (!print_format) {
+    //                         frappe.msgprint(__('No Bulk Sponsorship Print Format set in MMUST Donor Settings.'));
+    //                         return;
+    //                     }
+
+    //                     // Print and attach
+    //                     frappe.call({
+    //                         method: 'frappe.utils.print_format.download_pdf',
+    //                         args: {
+    //                             doctype: 'Sponsorship Allocation',
+    //                             name: frm.doc.name,
+    //                             format: print_format,
+    //                             no_letterhead: 0
+    //                         },
+    //                         callback: function () {
+    //                             // Open print view
+    //                             const url = frappe.urllib.get_full_url(
+    //                                 `/printview?doctype=Sponsorship Allocation&name=${frm.doc.name}&format=${print_format}&no_letterhead=0`
+    //                             );
+    //                             window.open(url, '_blank');
+
+    //                             // Attach PDF to document
+    //                             frappe.call({
+    //                                 method: 'frappe.utils.pdf.get_pdf',
+    //                                 args: {
+    //                                     doctype: 'Sponsorship Allocation',
+    //                                     name: frm.doc.name,
+    //                                     format: print_format
+    //                                 }
+    //                             });
+
+    //                             frappe.show_alert({
+    //                                 message: __('Bulk receipt printed and attached.'),
+    //                                 indicator: 'green'
+    //                             });
+    //                         }
+    //                     });
+    //                 });
+    //         }, __('Print'));
+    //     }
+    // },
+
+    refresh: function (frm) {
         frm.set_df_property('donation', 'read_only', frm.doc.donor ? 0 : 1);
 
-        // Set donation filter if donor already selected
+        // Set donation query filter (no return — just set_query)
         if (frm.doc.donor) {
-            return {
-                query: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.get_donor_donations',
-                filters: { donor: frm.doc.donor }
-            };
+            frm.set_query('donation', function () {
+                return {
+                    query: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.get_donor_donations',
+                    filters: { donor: frm.doc.donor }
+                };
+            });
         }
 
-        // Add custom buttons or actions here
+        // Distribute Equally button
         if (frm.doc.docstatus === 0 && frm.doc.total_allocated !== frm.doc.total) {
             frm.add_custom_button(__('Distribute Equally'), function () {
                 distribute_equally(frm);
+            });
+        }
+
+        // Print buttons
+        if (frm.doc.docstatus === 1) {
+            frappe.db.get_value('MMUST Donor Settings', 'MMUST Donor Settings', [
+                'single_sponsorship_print_format',
+                'bulk_sponsorship_print_format'
+            ], function (settings) {
+
+                // frm.add_custom_button(__('Print Single Receipt'), function () {
+                //     const format = settings.single_sponsorship_print_format;
+                //     if (!format) {
+                //         frappe.msgprint(__('No Single Sponsorship Print Format set in MMUST Donor Settings.'));
+                //         return;
+                //     }
+                //     const url = `/printview?doctype=${encodeURIComponent('Sponsorship Allocation')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
+                //     window.open(url, '_blank');
+                // }, __('Print'));
+
+                frm.add_custom_button(__('Print Single Receipt'), function () {
+                    const format = settings.single_sponsorship_print_format;
+                    if (!format) {
+                        frappe.msgprint(__('No Single Sponsorship Print Format set in MMUST Donor Settings.'));
+                        return;
+                    }
+
+                    if (!frm.doc.beneficiaries || frm.doc.beneficiaries.length === 0) {
+                        frappe.msgprint(__('No beneficiaries found on this allocation.'));
+                        return;
+                    }
+
+                    // Build options for Select field
+                    let options = frm.doc.beneficiaries.map(b => ({
+                        label: `${b.student_name} (${b.student})`,
+                        value: b.student
+                    }));
+
+                    let d = new frappe.ui.Dialog({
+                        title: __('Select Beneficiary'),
+                        fields: [
+                            {
+                                fieldname: 'student',
+                                fieldtype: 'Select',
+                                label: __('Beneficiary'),
+                                options: options.map(o => o.value),
+                                reqd: 1
+                            }
+                        ],
+                        primary_action_label: __('Print'),
+                        primary_action: function (values) {
+                            d.hide();
+                            const url = `/printview?doctype=${encodeURIComponent('Sponsorship Allocation')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0&_beneficiary=${encodeURIComponent(values.student)}`;
+                            window.open(url, '_blank');
+                        }
+                    });
+
+                    // Set labels properly
+                    d.fields_dict.student.df.options = options.map(o => o.value).join('\n');
+                    d.fields_dict.student.$wrapper.find('select').empty();
+                    options.forEach(o => {
+                        d.fields_dict.student.$wrapper.find('select').append(
+                            `<option value="${o.value}">${o.label}</option>`
+                        );
+                    });
+
+                    d.show();
+                }, __('Print'));
+
+                frm.add_custom_button(__('Print Bulk Receipt'), function () {
+                    const format = settings.bulk_sponsorship_print_format;
+                    if (!format) {
+                        frappe.msgprint(__('No Bulk Sponsorship Print Format set in MMUST Donor Settings.'));
+                        return;
+                    }
+                    const url = `/printview?doctype=${encodeURIComponent('Sponsorship Allocation')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
+                    window.open(url, '_blank');
+                }, __('Print'));
+
             });
         }
     },

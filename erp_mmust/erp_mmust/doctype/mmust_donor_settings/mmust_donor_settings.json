@@ -35,12 +35,24 @@
             "options": "Print Format"
         },
         {
+            "fieldname": "single_sponsorship_print_format",
+            "label": "Single Sponsorship Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format"
+        },
+        {
             "fieldname": "col_break_print",
             "fieldtype": "Column Break"
         },
         {
             "fieldname": "reallocation_print_format",
             "label": "Reallocation Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format"
+        },
+        {
+            "fieldname": "bulk_sponsorship_print_format",
+            "label": "Bulk Sponsorship Print Format",
             "fieldtype": "Link",
             "options": "Print Format"
         }
