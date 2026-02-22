@@ -55,6 +55,77 @@
             "label": "Bulk Sponsorship Print Format",
             "fieldtype": "Link",
             "options": "Print Format"
+        },
+        {
+            "fieldname": "sponsorship_signatories_section",
+            "label": "Sponsorship Signatories",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "sfa_name",
+            "label": "Student Finance Officer Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "sfa_signature",
+            "label": "Student Finance Officer Signature",
+            "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "col_break_sig_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "internal_auditor_name",
+            "label": "Internal Auditor Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "internal_auditor_signature",
+            "label": "Internal Auditor Signature",
+            "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "col_break_sig_2",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "finance_officer_name",
+            "label": "Finance Officer Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "finance_officer_signature",
+            "label": "Finance Officer Signature",
+            "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "col_break_sig_3",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "dvc_finance_name",
+            "label": "DVC Finance Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "dvc_finance_signature",
+            "label": "DVC Finance Signature",
+            "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "col_break_sig_4",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "accountant_name",
+            "label": "Accountant Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "accountant_signature",
+            "label": "Accountant Signature",
+            "fieldtype": "Attach Image"
         }
     ],
     "permissions": [

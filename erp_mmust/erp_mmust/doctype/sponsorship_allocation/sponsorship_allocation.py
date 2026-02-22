@@ -18,7 +18,35 @@ class SponsorshipAllocation(Document):
 	def validate(self):
 		self.validate_donation_amount()
 		self.calculate_totals()
+		self.validate_donation_balance()
 		# self.validate_allocation_total()
+
+	def validate_donation_balance(self):
+		if not self.donation:
+			return
+
+		donation_amount = frappe.db.get_value("Donation", self.donation, "amount") or 0
+
+		# Sum all submitted/saved SAs using this donation, excluding current doc
+		total_used = frappe.db.sql("""
+			SELECT COALESCE(SUM(total_allocated), 0)
+			FROM `tabSponsorship Allocation`
+			WHERE donation = %s
+			AND docstatus != 2
+			AND name != %s
+		""", (self.donation, self.name or ""))[0][0] or 0
+
+		available = frappe.utils.flt(donation_amount) - frappe.utils.flt(total_used)
+
+		if frappe.utils.flt(self.total_allocated) > available:
+			frappe.throw(
+				f"Total Allocated (<b>₦{frappe.utils.flt(self.total_allocated):,.2f}</b>) "
+				f"exceeds available balance on Donation <b>{self.donation}</b>.<br>"
+				f"Donation Amount: <b>₦{frappe.utils.flt(donation_amount):,.2f}</b><br>"
+				f"Already Allocated: <b>₦{frappe.utils.flt(total_used):,.2f}</b><br>"
+				f"Available: <b>₦{available:,.2f}</b>",
+				title="Insufficient Donation Balance"
+			)
 	
 	def validate_donation_amount(self):
 		"""Validate that total does not exceed donation amount if donation is linked"""
@@ -263,25 +291,60 @@ def distribute_amount_equally(students, total_amount):
 
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
-    donor = filters.get('donor')
-    return frappe.db.sql("""
-        SELECT name, amount, date 
-        FROM `tabDonation`
-        WHERE donor = %(donor)s 
-        AND docstatus = 1
-        AND (name LIKE %(txt)s OR amount LIKE %(txt)s)
-        ORDER BY date DESC, creation DESC
-        LIMIT %(page_len)s OFFSET %(start)s
-    """, {
-        'donor': donor,
-        'txt': f'%{txt}%',
-        'page_len': page_len,
-        'start': start
-    })
+# @frappe.whitelist()
+# @frappe.validate_and_sanitize_search_inputs
+# def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
+#     donor = filters.get('donor')
+#     return frappe.db.sql("""
+#         SELECT name, amount, date 
+#         FROM `tabDonation`
+#         WHERE donor = %(donor)s 
+#         AND docstatus = 1
+#         AND (name LIKE %(txt)s OR amount LIKE %(txt)s)
+#         ORDER BY date DESC, creation DESC
+#         LIMIT %(page_len)s OFFSET %(start)s
+#     """, {
+#         'donor': donor,
+#         'txt': f'%{txt}%',
+#         'page_len': page_len,
+#         'start': start
+#     })
 
+
+@frappe.whitelist()
+def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
+    import json
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    donor = filters.get("donor")
+
+    return frappe.db.sql("""
+        SELECT 
+            d.name,
+            d.amount,
+            d.date,
+            (d.amount - COALESCE(used.total_used, 0)) AS available
+        FROM `tabDonation` d
+        LEFT JOIN (
+            SELECT 
+                donation,
+                SUM(total_allocated) AS total_used
+            FROM `tabSponsorship Allocation`
+            WHERE docstatus != 2
+            AND donation IS NOT NULL
+            AND donation != ''
+            GROUP BY donation
+        ) used ON used.donation = d.name
+        WHERE d.donor = %s
+        AND d.docstatus = 1
+        AND (d.amount - COALESCE(used.total_used, 0)) > 0
+        AND (d.name LIKE %s OR d.amount LIKE %s)
+        ORDER BY d.date DESC
+        LIMIT %s OFFSET %s
+    """, (donor, f"%{txt}%", f"%{txt}%", int(page_len), int(start)))
+
+	
 @frappe.whitelist()
 def get_beneficiary_for_print(docname, student):
     doc = frappe.get_doc("Sponsorship Allocation", docname)
@@ -289,3 +352,20 @@ def get_beneficiary_for_print(docname, student):
         if row.student == student:
             return row.as_dict()
     frappe.throw(f"Beneficiary {student} not found in {docname}")
+
+
+@frappe.whitelist()
+def get_donation_available_balance(donation, exclude_doc=""):
+    from frappe.utils import flt
+
+    donation_amount = flt(frappe.db.get_value("Donation", donation, "amount") or 0)
+
+    total_used = frappe.db.sql("""
+        SELECT COALESCE(SUM(total_allocated), 0)
+        FROM `tabSponsorship Allocation`
+        WHERE donation = %s
+        AND docstatus != 2
+        AND name != %s
+    """, (donation, exclude_doc))[0][0] or 0
+
+    return flt(donation_amount) - flt(total_used)

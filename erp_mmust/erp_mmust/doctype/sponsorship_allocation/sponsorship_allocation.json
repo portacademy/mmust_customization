@@ -39,6 +39,7 @@
         "get_students_button",
         "financial_summary_section",
         "total",
+        "available_balance",
         "column_break_19",
         "balance",
         "total_allocated",
@@ -251,6 +252,14 @@
             "fieldtype": "Currency",
             "label": "Total Available",
             "reqd": 1
+        },
+        {
+            "fieldname": "available_balance",
+            "label": "Available Donation Balance",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "depends_on": "eval:doc.donation",
+            "description": "Remaining unallocated balance on the selected donation"
         },
         {
             "fieldname": "column_break_19",
