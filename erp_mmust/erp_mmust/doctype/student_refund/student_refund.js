@@ -525,21 +525,6 @@ frappe.ui.form.on('Student Refund Reallocation', {
 
 // ─── CHILD TABLE — Student Refund Item (Hostel) ──────────────────────────────
 
-// frappe.ui.form.on('Student Refund Item', {
-//     refundable_amount: function (frm) {
-//         let total = 0;
-//         (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
-//         frm.set_value('total_amount', total);
-//         frm.refresh_field('total_amount');
-//     },
-//     items_remove: function (frm) {
-//         let total = 0;
-//         (frm.doc.items || []).forEach(row => { total += flt(row.refundable_amount || 0); });
-//         frm.set_value('total_amount', total);
-//     }
-// });
-
-
 frappe.ui.form.on('Student Refund Item', {
     sales_invoice: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
