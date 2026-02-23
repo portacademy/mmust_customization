@@ -16,7 +16,7 @@
             "fieldname": "student",
             "fieldtype": "Link",
             "in_list_view": 1,
-            "label": "Student (Customer)",
+            "label": "Student Reg No",
             "options": "Customer",
             "reqd": 1
         },
