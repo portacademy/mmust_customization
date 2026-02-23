@@ -15,18 +15,23 @@ def process_accounting(doc, method=None):
         title="process_accounting debug",
         message=f"doc: {doc.name} | state: '{state}' | request_type: '{doc.request_type}' | action_type: '{doc.action_type}'"
     )
-
-    if state ==  "Pending PV" and doc.action_type == "Refund to Funder":
-        post_receipt_cancellation(doc)
-    elif state == "Closed" and doc.action_type == "Reallocate to Student":
-        post_reallocation_journal_entry(doc)
-    elif state == "Closed" and doc.action_type == "Refund to Funder":
-        post_refund_payment_entry(doc)
-    elif state == "Receipt Cancelled" and doc.action_type == "Receipt Cancellation":
-        post_full_receipt_cancellation(doc)
-    elif state == "Hostel Closed" and doc.request_type == "Hostel":
-        post_hostel_credit_note(doc)
-
+    try:
+        if state ==  "Pending PV" and doc.action_type == "Refund to Funder":
+            post_receipt_cancellation(doc)
+        elif state == "Closed" and doc.action_type == "Reallocate to Student":
+            post_reallocation_journal_entry(doc)
+        elif state == "Closed" and doc.action_type == "Refund to Funder":
+            post_refund_payment_entry(doc)
+        elif state == "Receipt Cancelled" and doc.action_type == "Receipt Cancellation":
+            post_full_receipt_cancellation(doc)
+        elif state == "Hostel Closed" and doc.request_type == "Hostel":
+            post_hostel_credit_note(doc)
+    except Exception as e:
+        frappe.log_error(
+            title=f"process_accounting ERROR — {state}",
+            message=frappe.get_traceback()
+        )
+        frappe.throw(f"Accounting error at stage '{state}': {str(e)}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DONATION — Journal Entry on Donation Submit
@@ -95,7 +100,9 @@ def post_receipt_cancellation(doc):
     currency = get_currency()
     company  = get_company()
 
-    if frappe.db.get_value("Student Refund", doc.name, "journal_entry"):
+    # if frappe.db.get_value("Student Refund", doc.name, "journal_entry"):
+    #     return
+    if frappe.db.get_value("Student Refund", doc.name, "sponsorship_reversal_je"):
         return
 
     if doc.request_type not in ("HELB", "CDF", "Scholarship"):
@@ -171,7 +178,8 @@ def post_receipt_cancellation(doc):
     je.insert(ignore_permissions=True)
     je.submit()
 
-    frappe.db.set_value("Student Refund", doc.name, "journal_entry",  je.name)
+    # frappe.db.set_value("Student Refund", doc.name, "journal_entry",  je.name)
+    frappe.db.set_value("Student Refund", doc.name, "sponsorship_reversal_je", je.name)
     frappe.db.set_value("Student Refund", doc.name, "credit_account", funding_account)
     frappe.db.set_value("Student Refund", doc.name, "debit_account",  student_debtors_account)
 
@@ -223,7 +231,8 @@ def _post_hostel_receipt_cancellation(doc):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def post_reallocation_journal_entry(doc):
-    if frappe.db.get_value("Student Refund", doc.name, "journal_entry"):
+    # if frappe.db.get_value("Student Refund", doc.name, "journal_entry"):
+    if frappe.db.get_value("Student Refund", doc.name, "reallocation_je"):
         return
 
     if doc.request_type not in ("HELB", "CDF", "Scholarship"):
@@ -287,7 +296,8 @@ def post_reallocation_journal_entry(doc):
     je.insert(ignore_permissions=True)
     je.submit()
 
-    frappe.db.set_value("Student Refund", doc.name, "journal_entry", je.name)
+    # frappe.db.set_value("Student Refund", doc.name, "journal_entry", je.name)
+    frappe.db.set_value("Student Refund", doc.name, "reallocation_je", je.name)
 
     frappe.msgprint(
         f"✅ Reallocation Complete: Journal Entry posted.<br>"
@@ -446,6 +456,54 @@ def post_full_receipt_cancellation(doc):
         frappe.throw(f"Failed at Step 1 (Payment Entry/JE): {str(e)}")
 
     # Step 1b: Find and cancel any Reallocation Student Refunds linked to this SA
+    # try:
+    #     reallocation_refunds = frappe.get_all(
+    #         "Student Refund",
+    #         filters={
+    #             "sponsorship_allocation": sa.name,
+    #             "action_type": "Reallocate to Student",
+    #             "docstatus": 1
+    #         },
+    #         fields=["name", "journal_entry"]
+    #     )
+
+    #     log(f"Step 1b: Found {len(reallocation_refunds)} reallocation refunds to cancel")
+
+    #     for sr in reallocation_refunds:
+    #         if sr.journal_entry:
+    #             # Clear the link FIRST before cancelling
+    #             frappe.db.set_value("Student Refund", sr.name, "journal_entry", None)
+    #             frappe.db.commit()
+
+    #             if frappe.db.exists("Journal Entry", sr.journal_entry):
+    #                 je = frappe.get_doc("Journal Entry", sr.journal_entry)
+    #                 if je.docstatus == 1:
+    #                     je.flags.ignore_links = True
+    #                     je.cancel()
+    #                     frappe.db.commit()
+    #                     log(f"Step 1b: Reallocation JE {sr.journal_entry} cancelled")
+    #                     frappe.msgprint(
+    #                         f"✅ Reallocation Journal Entry <b>{sr.journal_entry}</b> cancelled.",
+    #                         alert=True, indicator="orange"
+    #                     )
+
+    #         # Cancel the Student Refund itself
+    #         sr_doc = frappe.get_doc("Student Refund", sr.name)
+    #         sr_doc.flags.ignore_links = True
+    #         sr_doc.cancel()
+    #         frappe.db.commit()
+    #         log(f"Step 1b: Reallocation Student Refund {sr.name} cancelled")
+    #         frappe.msgprint(
+    #             f"✅ Reallocation Student Refund <b>{sr.name}</b> cancelled.",
+    #             alert=True, indicator="orange"
+    #         )
+
+    # except Exception as e:
+    #     log(f"Step 1b FAILED: {str(e)}")
+    #     frappe.throw(f"Failed at Step 1b (Reallocation Refunds): {str(e)}")
+
+
+    # Step 1b: Find and cancel any Reallocation Student Refunds linked to this SA
     try:
         reallocation_refunds = frappe.get_all(
             "Student Refund",
@@ -454,26 +512,31 @@ def post_full_receipt_cancellation(doc):
                 "action_type": "Reallocate to Student",
                 "docstatus": 1
             },
-            fields=["name", "journal_entry"]
+            fields=["name", "journal_entry", "reallocation_je"]  # fetch both
         )
 
         log(f"Step 1b: Found {len(reallocation_refunds)} reallocation refunds to cancel")
 
         for sr in reallocation_refunds:
-            if sr.journal_entry:
+            # Cancel both journal_entry and reallocation_je if they exist
+            for je_field in ["journal_entry", "reallocation_je"]:
+                je_name = sr.get(je_field)
+                if not je_name:
+                    continue
+
                 # Clear the link FIRST before cancelling
-                frappe.db.set_value("Student Refund", sr.name, "journal_entry", None)
+                frappe.db.set_value("Student Refund", sr.name, je_field, None)
                 frappe.db.commit()
 
-                if frappe.db.exists("Journal Entry", sr.journal_entry):
-                    je = frappe.get_doc("Journal Entry", sr.journal_entry)
+                if frappe.db.exists("Journal Entry", je_name):
+                    je = frappe.get_doc("Journal Entry", je_name)
                     if je.docstatus == 1:
                         je.flags.ignore_links = True
                         je.cancel()
                         frappe.db.commit()
-                        log(f"Step 1b: Reallocation JE {sr.journal_entry} cancelled")
+                        log(f"Step 1b: {je_field} JE {je_name} cancelled")
                         frappe.msgprint(
-                            f"✅ Reallocation Journal Entry <b>{sr.journal_entry}</b> cancelled.",
+                            f"✅ Reallocation Journal Entry <b>{je_name}</b> cancelled.",
                             alert=True, indicator="orange"
                         )
 

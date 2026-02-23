@@ -318,6 +318,26 @@
             "read_only": 1
         },
         {
+            "fieldname": "sponsorship_reversal_je",
+            "label": "Sponsorship Reversal Journal Entry",
+            "fieldtype": "Link",
+            "options": "Journal Entry",
+            "read_only": 1,
+            "no_copy": 1,
+            "allow_on_submit": 1,
+            "print_hide": 1
+        },
+        {
+            "fieldname": "reallocation_je",
+            "label": "Reallocation Journal Entry",
+            "fieldtype": "Link",
+            "options": "Journal Entry",
+            "read_only": 1,
+            "no_copy": 1,
+            "allow_on_submit": 1,
+            "print_hide": 1
+        },
+        {
             "fieldname": "payment_entry",
             "label": "Payment Entry",
             "fieldtype": "Link",

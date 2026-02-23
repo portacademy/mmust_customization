@@ -89,6 +89,31 @@ frappe.ui.form.on('Sponsorship Allocation', {
         }
     },
 
+    // donation: function (frm) {
+    //     if (frm.doc.donation) {
+    //         frappe.call({
+    //             method: 'frappe.client.get_value',
+    //             args: {
+    //                 doctype: 'Donation',
+    //                 filters: { name: frm.doc.donation },
+    //                 fieldname: ['amount', 'donor', 'company', 'date']
+    //             },
+    //             callback: function (r) {
+    //                 if (r.message) {
+    //                     frm.set_value('amount', r.message.amount);
+    //                     if (!frm.doc.donor) frm.set_value('donor', r.message.donor);
+    //                     if (!frm.doc.company) frm.set_value('company', r.message.company);
+    //                     if (!frm.doc.date) frm.set_value('date', r.message.date);
+    //                     if (!frm.doc.total) frm.set_value('total', r.message.amount);
+    //                     update_available_balance(frm);
+    //                 }
+    //             }
+    //         });
+    //     } else {
+    //         frm.set_value('available_balance', 0);
+    //     }
+    // },
+
     donation: function (frm) {
         if (frm.doc.donation) {
             frappe.call({
@@ -104,8 +129,30 @@ frappe.ui.form.on('Sponsorship Allocation', {
                         if (!frm.doc.donor) frm.set_value('donor', r.message.donor);
                         if (!frm.doc.company) frm.set_value('company', r.message.company);
                         if (!frm.doc.date) frm.set_value('date', r.message.date);
-                        if (!frm.doc.total) frm.set_value('total', r.message.amount);
-                        update_available_balance(frm);
+
+                        // Fetch available balance and use THAT as total, not full donation amount
+                        frappe.call({
+                            method: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.get_donation_available_balance',
+                            args: {
+                                donation: frm.doc.donation,
+                                exclude_doc: frm.doc.name || ""
+                            },
+                            callback: function (res) {
+                                if (res.message !== undefined) {
+                                    const available = res.message;
+                                    frm.set_value('available_balance', available);
+                                    // Set total to available balance, not full donation amount
+                                    if (!frm.doc.total) {
+                                        frm.set_value('total', available);
+                                    }
+                                    if (available <= 0) {
+                                        frm.get_field('available_balance').$wrapper.css('color', 'red');
+                                    } else {
+                                        frm.get_field('available_balance').$wrapper.css('color', 'green');
+                                    }
+                                }
+                            }
+                        });
                     }
                 }
             });
@@ -196,7 +243,8 @@ frappe.ui.form.on('Sponsorship Allocation', {
                                 method: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.distribute_amount_equally',
                                 args: {
                                     students: selected_students,
-                                    total_amount: frm.doc.total
+                                    // total_amount: frm.doc.total
+                                    total_amount: frm.doc.available_balance || frm.doc.total
                                 },
                                 callback: function (r) {
                                     if (r.message) {
@@ -276,7 +324,7 @@ function load_from_csv(frm) {
         method: 'erp_mmust.erp_mmust.doctype.sponsorship_allocation.sponsorship_allocation.load_students_from_csv',
         args: {
             csv_file_url: frm.doc.upload_csv,
-            total_amount: frm.doc.total
+            total_amount: frm.doc.available_balance || frm.doc.total
         },
         callback: function (r) {
             if (r.message) {
@@ -319,13 +367,30 @@ function calculate_balance(frm) {
     }
 }
 
+// function distribute_equally(frm) {
+//     if (!frm.doc.beneficiaries || frm.doc.beneficiaries.length === 0) {
+//         frappe.msgprint(__('Please add beneficiaries first'));
+//         return;
+//     }
+
+//     let amount_per_student = frm.doc.total / frm.doc.beneficiaries.length;
+
+//     frm.doc.beneficiaries.forEach(function (row) {
+//         frappe.model.set_value(row.doctype, row.name, 'amount', amount_per_student);
+//     });
+
+//     frm.refresh_field('beneficiaries');
+//     calculate_balance(frm);
+// }
+
 function distribute_equally(frm) {
     if (!frm.doc.beneficiaries || frm.doc.beneficiaries.length === 0) {
         frappe.msgprint(__('Please add beneficiaries first'));
         return;
     }
 
-    let amount_per_student = frm.doc.total / frm.doc.beneficiaries.length;
+    const split_amount = frm.doc.available_balance || frm.doc.total || 0;
+    let amount_per_student = split_amount / frm.doc.beneficiaries.length;
 
     frm.doc.beneficiaries.forEach(function (row) {
         frappe.model.set_value(row.doctype, row.name, 'amount', amount_per_student);

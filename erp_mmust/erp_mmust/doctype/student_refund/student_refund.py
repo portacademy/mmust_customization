@@ -328,15 +328,35 @@ class StudentRefund(Document):
         """, (customer,))
         return flt(result[0][0]) if result else 0.0
 
+    # def on_cancel(self):
+    #     if self.journal_entry:
+    #         je = frappe.get_doc("Journal Entry", self.journal_entry)
+    #         if je.docstatus == 1:
+    #             je.cancel()
+    #     if self.payment_entry:
+    #         pe = frappe.get_doc("Payment Entry", self.payment_entry)
+    #         if pe.docstatus == 1:
+    #             pe.cancel()
+
     def on_cancel(self):
-        if self.journal_entry:
-            je = frappe.get_doc("Journal Entry", self.journal_entry)
-            if je.docstatus == 1:
-                je.cancel()
-        if self.payment_entry:
-            pe = frappe.get_doc("Payment Entry", self.payment_entry)
-            if pe.docstatus == 1:
-                pe.cancel()
+        for field in [
+            "journal_entry",
+            "sponsorship_reversal_je",
+            "reallocation_je",
+            "disbursement_journal_entry",
+            "payment_entry"
+        ]:
+            doc_name = self.get(field)
+            if not doc_name:
+                continue
+            if frappe.db.exists("Journal Entry", doc_name):
+                je = frappe.get_doc("Journal Entry", doc_name)
+                if je.docstatus == 1:
+                    je.cancel()
+            elif frappe.db.exists("Payment Entry", doc_name):
+                pe = frappe.get_doc("Payment Entry", doc_name)
+                if pe.docstatus == 1:
+                    pe.cancel()
 
     
     def validate_hostel_items(self):

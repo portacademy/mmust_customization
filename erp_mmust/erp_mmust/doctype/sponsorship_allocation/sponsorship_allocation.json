@@ -122,7 +122,7 @@
             "fetch_from": "donation.amount",
             "fieldname": "amount",
             "fieldtype": "Currency",
-            "label": "Donation Amount",
+            "label": "Original Donation Amount",
             "read_only": 1
         },
         {
@@ -250,8 +250,9 @@
         {
             "fieldname": "total",
             "fieldtype": "Currency",
-            "label": "Total Available",
-            "reqd": 1
+            "label": "Available Donation Amount",
+            "reqd": 1,
+            "read_only": 1
         },
         {
             "fieldname": "available_balance",
