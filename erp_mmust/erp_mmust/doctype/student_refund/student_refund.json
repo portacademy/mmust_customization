@@ -155,6 +155,14 @@
             "description": "Total amount from the original Sponsorship Allocation"
         },
         {
+            "fieldname": "sponsorship_allocation_date",
+            "label": "Sponsorship Allocation Date",
+            "fieldtype": "Date",
+            "fetch_from": "sponsorship_allocation.date",
+            "read_only": 1,
+            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)"
+        },
+        {
             "fieldname": "col_break_donation",
             "fieldtype": "Column Break"
         },
