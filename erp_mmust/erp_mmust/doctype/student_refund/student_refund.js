@@ -117,13 +117,15 @@ frappe.ui.form.on('Student Refund', {
         // Only unlock if document is submitted
         if (!is_submitted) return;
 
-        // Accounts Manager can edit all narration fields
+        // Accounts Manager can edit all
         if (user_roles.includes('Accounts Manager')) {
             Object.values(role_field_map).forEach(function (fieldname) {
                 frm.set_df_property(fieldname, 'read_only', 0);
             });
         } else {
-            // Unlock only the field belonging to the current user's role
+            // Unlock ONLY the specific field for the specific role
+            // If user has Finance Officer → only finance_officer_narration unlocks
+            // Even if user has multiple roles, each field is independent
             Object.entries(role_field_map).forEach(function ([role, fieldname]) {
                 if (user_roles.includes(role)) {
                     frm.set_df_property(fieldname, 'read_only', 0);

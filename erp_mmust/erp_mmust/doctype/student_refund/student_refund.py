@@ -499,3 +499,36 @@ def get_hostel_invoices(doctype, txt, searchfield, start, page_len, filters):
 
 def before_update_after_submit(self, method=None):
     self.flags.ignore_mandatory = True
+    self._protect_narration_fields()
+
+
+def _protect_narration_fields(self):
+    """Ensure users can only update their own narration field after submit"""
+    role_field_map = {
+        'Student Finance Accountant': 'accountant_narration',
+        'Finance Officer':            'finance_officer_narration',
+        'Internal Auditor':           'internal_auditor_narration',
+        'Payable Accountant':         'payable_accountant_narration',
+        'DVC Finance':                'dvc_narration',
+        'Accounts Manager':           'accounts_manager_narration'
+    }
+
+    user_roles = frappe.get_roles(frappe.session.user)
+
+    # Accounts Manager can edit all — skip protection
+    if 'Accounts Manager' in user_roles:
+        return
+
+    # Get the saved (original) values from DB
+    saved = frappe.db.get_value(
+        "Student Refund",
+        self.name,
+        list(role_field_map.values()),
+        as_dict=True
+    )
+
+    for role, fieldname in role_field_map.items():
+        # If user does NOT have this role, revert field to saved value
+        if role not in user_roles:
+            saved_value = saved.get(fieldname) if saved else None
+            self.set(fieldname, saved_value)

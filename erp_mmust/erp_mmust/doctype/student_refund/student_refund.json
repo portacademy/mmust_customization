@@ -287,17 +287,17 @@
         },
         {
             "fieldname": "section_narrations",
-            "label": "Workflow Narrations",
+            "label": "Remarks",
             "fieldtype": "Section Break",
             "collapsible": 1
         },
         {
             "fieldname": "accountant_narration",
-            "label": "Accountant Narration",
+            "label": "Accountant Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by Student Finance Accountant"
+            "description": "Remark by Student Finance Accountant"
         },
         {
             "fieldname": "col_break_narration_1",
@@ -305,11 +305,11 @@
         },
         {
             "fieldname": "finance_officer_narration",
-            "label": "Finance Officer Narration",
+            "label": "Finance Officer Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by Finance Officer"
+            "description": "Remark by Finance Officer"
         },
         {
             "fieldname": "section_narrations_2",
@@ -317,11 +317,11 @@
         },
         {
             "fieldname": "internal_auditor_narration",
-            "label": "Internal Auditor Narration",
+            "label": "Internal Auditor Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by Internal Auditor"
+            "description": "Remark by Internal Auditor"
         },
         {
             "fieldname": "col_break_narration_2",
@@ -329,11 +329,11 @@
         },
         {
             "fieldname": "payable_accountant_narration",
-            "label": "Payable Accountant Narration",
+            "label": "Payable Accountant Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by Payable Accountant"
+            "description": "Remark by Payable Accountant"
         },
         {
             "fieldname": "section_narrations_3",
@@ -341,11 +341,11 @@
         },
         {
             "fieldname": "dvc_narration",
-            "label": "DVC Finance Narration",
+            "label": "DVC Finance Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by DVC Finance"
+            "description": "Remark by DVC Finance"
         },
         {
             "fieldname": "col_break_narration_3",
