@@ -368,6 +368,26 @@
             "description": "Narration by Accounts Manager"
         },
         {
+            "fieldname": "section_remarks_trail",
+            "label": "Remarks Trail",
+            "fieldtype": "Section Break",
+            "collapsible": 0
+        },
+        {
+            "fieldname": "remarks_trail_placeholder",
+            "fieldtype": "HTML",
+            "options": "<p style='color:#999; font-style:italic;'>No remarks recorded yet. Trail will appear here after the first workflow action with a remark.</p>",
+            "depends_on": "eval:!doc.remarks_trail"
+        },
+        {
+            "fieldname": "remarks_trail",
+            "label": "Conversation Trail",
+            "fieldtype": "Small Text",
+            "read_only": 1,
+            "allow_on_submit": 1,
+            "hidden": 0
+        },
+        {
             "fieldname": "section_accounting",
             "label": "Accounting Details",
             "fieldtype": "Section Break",
