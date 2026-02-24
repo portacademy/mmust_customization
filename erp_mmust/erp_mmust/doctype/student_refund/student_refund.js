@@ -96,6 +96,46 @@ frappe.ui.form.on('Student Refund', {
         frm.trigger('lock_narration_fields');
     },
 
+    // lock_narration_fields: function (frm) {
+    //     const role_field_map = {
+    //         'Student Finance Accountant': 'accountant_narration',
+    //         'Finance Officer': 'finance_officer_narration',
+    //         'Internal Auditor': 'internal_auditor_narration',
+    //         'Payable Accountant': 'payable_accountant_narration',
+    //         'DVC Finance': 'dvc_narration',
+    //         'Accounts Manager': 'accounts_manager_narration'
+    //     };
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_submitted = frm.doc.docstatus === 1;
+
+    //     // Lock ALL narration fields first — always
+    //     Object.values(role_field_map).forEach(function (fieldname) {
+    //         frm.set_df_property(fieldname, 'read_only', 1);
+    //     });
+
+    //     // Only unlock if document is submitted
+    //     if (!is_submitted) return;
+
+    //     // Accounts Manager can edit all
+    //     if (user_roles.includes('Accounts Manager')) {
+    //         Object.values(role_field_map).forEach(function (fieldname) {
+    //             frm.set_df_property(fieldname, 'read_only', 0);
+    //         });
+    //     } else {
+    //         // Unlock ONLY the specific field for the specific role
+    //         // If user has Finance Officer → only finance_officer_narration unlocks
+    //         // Even if user has multiple roles, each field is independent
+    //         Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+    //             if (user_roles.includes(role)) {
+    //                 frm.set_df_property(fieldname, 'read_only', 0);
+    //             }
+    //         });
+    //     }
+
+    //     frm.refresh_fields(Object.values(role_field_map));
+    // },
+
     lock_narration_fields: function (frm) {
         const role_field_map = {
             'Student Finance Accountant': 'accountant_narration',
@@ -114,18 +154,20 @@ frappe.ui.form.on('Student Refund', {
             frm.set_df_property(fieldname, 'read_only', 1);
         });
 
-        // Only unlock if document is submitted
-        if (!is_submitted) return;
-
-        // Accounts Manager can edit all
+        // Accounts Manager can edit all regardless of docstatus
         if (user_roles.includes('Accounts Manager')) {
             Object.values(role_field_map).forEach(function (fieldname) {
                 frm.set_df_property(fieldname, 'read_only', 0);
             });
+
+        } else if (!is_submitted) {
+            // On draft — only Finance Officer can write their narration
+            if (user_roles.includes('Finance Officer')) {
+                frm.set_df_property('finance_officer_narration', 'read_only', 0);
+            }
+
         } else {
-            // Unlock ONLY the specific field for the specific role
-            // If user has Finance Officer → only finance_officer_narration unlocks
-            // Even if user has multiple roles, each field is independent
+            // On submitted — unlock only the field matching the user's role
             Object.entries(role_field_map).forEach(function ([role, fieldname]) {
                 if (user_roles.includes(role)) {
                     frm.set_df_property(fieldname, 'read_only', 0);
