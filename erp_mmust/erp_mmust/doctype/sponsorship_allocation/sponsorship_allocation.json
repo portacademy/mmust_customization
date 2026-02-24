@@ -259,6 +259,7 @@
             "label": "Available Donation Balance",
             "fieldtype": "Currency",
             "read_only": 1,
+            "hidden": 1,
             "depends_on": "eval:doc.donation",
             "description": "Remaining unallocated balance on the selected donation"
         },
