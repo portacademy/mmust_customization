@@ -79,6 +79,55 @@ frappe.ui.form.on('Student Refund', {
         // Disable sponsorship_allocation if no funder on load
         frm.set_df_property('sponsorship_allocation', 'read_only', frm.doc.funder ? 0 : 1);
         frm.refresh_field('sponsorship_allocation');
+
+        if (frm.doc.action_type === 'Receipt Cancellation') {
+            frappe.after_render(function () {
+                const grid = frm.get_field('cancellation_beneficiaries').grid;
+                if (grid) {
+                    grid.cannot_add_rows = true;
+                    grid.cannot_delete_rows = true;
+                    grid.wrapper.find('.grid-add-row').hide();
+                    grid.wrapper.find('.grid-remove-rows').hide();
+                    grid.wrapper.find('.row-check').hide();
+                }
+            });
+        }
+
+        frm.trigger('lock_narration_fields');
+    },
+
+    lock_narration_fields: function (frm) {
+        const role_field_map = {
+            'Student Finance Accountant': 'accountant_narration',
+            'Finance Officer': 'finance_officer_narration',
+            'Internal Auditor': 'internal_auditor_narration',
+            'Payable Accountant': 'payable_accountant_narration',
+            'DVC Finance': 'dvc_narration',
+            'Accounts Manager': 'accounts_manager_narration'
+        };
+
+        const user_roles = frappe.user_roles || [];
+
+        // Lock ALL narration fields first
+        Object.values(role_field_map).forEach(function (fieldname) {
+            frm.set_df_property(fieldname, 'read_only', 1);
+        });
+
+        // Unlock only the field belonging to the current user's role
+        Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+            if (user_roles.includes(role)) {
+                frm.set_df_property(fieldname, 'read_only', 0);
+            }
+        });
+
+        // Accounts Manager can edit all
+        if (user_roles.includes('Accounts Manager')) {
+            Object.values(role_field_map).forEach(function (fieldname) {
+                frm.set_df_property(fieldname, 'read_only', 0);
+            });
+        }
+
+        frm.refresh_fields(Object.values(role_field_map));
     },
 
     workflow_state: function (frm) {
@@ -87,7 +136,7 @@ frappe.ui.form.on('Student Refund', {
 
 
     add_print_cheque_button: function (frm) {
-        frm.remove_custom_button('Print Refund');
+        frm.remove_custom_button('Print Cheque');
         frm.remove_custom_button('Print Receipt Cancellation');
         frm.remove_custom_button('Print Reallocation Receipt');
 
@@ -103,7 +152,7 @@ frappe.ui.form.on('Student Refund', {
                 frm.doc.workflow_state === 'Closed') {
 
                 const format = settings.refund_print_format || 'Sponsorship Cheque Print Format';
-                frm.add_custom_button(__('Print Refund'), function () {
+                frm.add_custom_button(__('Print Cheque'), function () {
                     const url = `/printview?doctype=${encodeURIComponent('Student Refund')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
                     window.open(url, '_blank');
                 }, __('Actions'));
@@ -202,6 +251,7 @@ frappe.ui.form.on('Student Refund', {
                 frm.set_value('donation_amount', sa.amount || 0);
                 frm.set_value('custom_cheque_id', sa.custom_cheque_id || '');
                 frm.set_value('total_allocated_in_donation', sa.total_allocated || 0);
+                frm.set_value('batch_number', frm.doc.sponsorship_allocation || '');
 
                 if (frm.doc.action_type === 'Refund to Funder') {
                     frm.clear_table('beneficiaries');
@@ -254,6 +304,18 @@ frappe.ui.form.on('Student Refund', {
                     frm.refresh_field('cancellation_beneficiaries');
                     frm.refresh();
                     frm.trigger('load_cancellation_balances');
+
+                    // ← ADD THIS after load_cancellation_balances
+                    frappe.after_render(function () {
+                        const grid = frm.get_field('cancellation_beneficiaries').grid;
+                        if (grid) {
+                            grid.cannot_add_rows = true;
+                            grid.cannot_delete_rows = true;
+                            grid.wrapper.find('.grid-add-row').hide();
+                            grid.wrapper.find('.grid-remove-rows').hide();
+                            grid.wrapper.find('.row-check').hide();
+                        }
+                    });
 
                     frappe.show_alert({
                         message: `Loaded ${(sa.beneficiaries || []).length} students for cancellation`,

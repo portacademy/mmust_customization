@@ -104,6 +104,8 @@
             "fieldname": "batch_number",
             "label": "HELB / CDF Batch Number",
             "fieldtype": "Data",
+            "read_only": 1,
+            "allow_on_submit": 1,
             "depends_on": "eval:in_list(['HELB','CDF'], doc.request_type)",
             "description": "HELB Batch Number or CDF Cheque Number for original payment identification"
         },
@@ -218,7 +220,11 @@
             "label": "Cancellation Beneficiaries",
             "fieldtype": "Table",
             "options": "Student Refund Cancellation Beneficiary",
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.sponsorship_allocation || doc.cancelled_sponsorship_allocation) && doc.action_type == 'Receipt Cancellation'"
+            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.sponsorship_allocation || doc.cancelled_sponsorship_allocation) && doc.action_type == 'Receipt Cancellation'",
+            "cannot_add_rows": 1,
+            "cannot_delete_rows": 1,
+            "in_place_edit": 0,
+            "read_only": 1
         },
         {
             "fieldname": "section_hostel_details",
@@ -278,6 +284,74 @@
             "fieldtype": "Currency",
             "read_only": 1,
             "in_list_view": 1
+        },
+        {
+            "fieldname": "section_narrations",
+            "label": "Workflow Narrations",
+            "fieldtype": "Section Break",
+            "collapsible": 1
+        },
+        {
+            "fieldname": "accountant_narration",
+            "label": "Accountant Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by Student Finance Accountant"
+        },
+        {
+            "fieldname": "col_break_narration_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "finance_officer_narration",
+            "label": "Finance Officer Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by Finance Officer"
+        },
+        {
+            "fieldname": "section_narrations_2",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "internal_auditor_narration",
+            "label": "Internal Auditor Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by Internal Auditor"
+        },
+        {
+            "fieldname": "col_break_narration_2",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "payable_accountant_narration",
+            "label": "Payable Accountant Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by Payable Accountant"
+        },
+        {
+            "fieldname": "section_narrations_3",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "dvc_narration",
+            "label": "DVC Finance Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by DVC Finance"
+        },
+        {
+            "fieldname": "col_break_narration_3",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "accounts_manager_narration",
+            "label": "Accounts Manager Narration",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "description": "Narration by Accounts Manager"
         },
         {
             "fieldname": "section_accounting",

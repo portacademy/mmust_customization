@@ -223,7 +223,7 @@
             "fieldname": "csv_upload",
             "fieldtype": "HTML",
             "label": "CSV Upload",
-            "options": "<div class='alert alert-info'>Upload a CSV file with column: <strong>customer_id</strong><br>Example:<br><code>customer_id<br>CUST-00001<br>CUST-00002</code></div>"
+            "options": "<div class='alert alert-info'>Upload a CSV file with column: <strong>customer_id</strong><br><br>Example:<br><code>customer_id<br>BSE/B/01-00030/2026<br>COM/B/01-00666/2024</code><br><br><a href='/files/Copy of today-test-allocation - Sheet1.csv' class='btn btn-sm btn-primary' download>Download Sample CSV</a></div>"
         },
         {
             "depends_on": "eval:doc.selection_method=='CSV Upload'",
