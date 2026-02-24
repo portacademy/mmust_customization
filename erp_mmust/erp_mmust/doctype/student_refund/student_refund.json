@@ -296,6 +296,7 @@
             "label": "Accountant Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by Student Finance Accountant"
         },
         {
@@ -307,6 +308,7 @@
             "label": "Finance Officer Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by Finance Officer"
         },
         {
@@ -318,6 +320,7 @@
             "label": "Internal Auditor Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by Internal Auditor"
         },
         {
@@ -329,6 +332,7 @@
             "label": "Payable Accountant Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by Payable Accountant"
         },
         {
@@ -340,6 +344,7 @@
             "label": "DVC Finance Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by DVC Finance"
         },
         {
@@ -351,6 +356,7 @@
             "label": "Accounts Manager Narration",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
+            "read_only": 1,
             "description": "Narration by Accounts Manager"
         },
         {

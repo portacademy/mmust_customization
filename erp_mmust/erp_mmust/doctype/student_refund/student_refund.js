@@ -107,23 +107,27 @@ frappe.ui.form.on('Student Refund', {
         };
 
         const user_roles = frappe.user_roles || [];
+        const is_submitted = frm.doc.docstatus === 1;
 
-        // Lock ALL narration fields first
+        // Lock ALL narration fields first — always
         Object.values(role_field_map).forEach(function (fieldname) {
             frm.set_df_property(fieldname, 'read_only', 1);
         });
 
-        // Unlock only the field belonging to the current user's role
-        Object.entries(role_field_map).forEach(function ([role, fieldname]) {
-            if (user_roles.includes(role)) {
-                frm.set_df_property(fieldname, 'read_only', 0);
-            }
-        });
+        // Only unlock if document is submitted
+        if (!is_submitted) return;
 
-        // Accounts Manager can edit all
+        // Accounts Manager can edit all narration fields
         if (user_roles.includes('Accounts Manager')) {
             Object.values(role_field_map).forEach(function (fieldname) {
                 frm.set_df_property(fieldname, 'read_only', 0);
+            });
+        } else {
+            // Unlock only the field belonging to the current user's role
+            Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+                if (user_roles.includes(role)) {
+                    frm.set_df_property(fieldname, 'read_only', 0);
+                }
             });
         }
 
@@ -225,6 +229,7 @@ frappe.ui.form.on('Student Refund', {
 
     sponsorship_allocation: function (frm) {
         if (!frm.doc.sponsorship_allocation) {
+            frm.set_value('batch_number', '');
             frm.set_value('donation_amount', 0);
             frm.set_value('custom_cheque_id', '');
             frm.set_value('total_allocated_in_donation', 0);
