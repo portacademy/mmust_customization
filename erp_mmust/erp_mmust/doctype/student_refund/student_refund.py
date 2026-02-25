@@ -521,8 +521,6 @@ def append_remark_to_trail(doc, remark_field, role_label):
 
 
 
-
-
 @frappe.whitelist()
 def get_cheque_donations(doctype, txt, searchfield, start, page_len, filters):
     import json
