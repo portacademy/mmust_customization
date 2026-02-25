@@ -25,6 +25,14 @@
             "columns": 3
         },
         {
+            "fieldname": "sponsorship_allocation",
+            "label": "Sponsorship Allocation",
+            "fieldtype": "Link",
+            "options": "Sponsorship Allocation",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
             "fieldname": "original_allocated_amount",
             "label": "Original Allocated Amount",
             "fieldtype": "Currency",

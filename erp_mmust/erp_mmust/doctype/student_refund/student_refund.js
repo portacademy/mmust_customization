@@ -48,6 +48,27 @@ frappe.ui.form.on('Student Refund', {
                 }
             };
         });
+        // frm.set_query('cheque_donation', function () {
+        //     return {
+        //         filters: {
+        //             donor: frm.doc.funder || '',
+        //             docstatus: 1
+        //         },
+        //         query: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_cheque_donations',
+        //         filter_args: {
+        //             funder: frm.doc.funder || ''
+        //         }
+        //     };
+        // });
+        frm.set_query('cheque_donation', function () {
+            return {
+                query: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_cheque_donations',
+                filters: {
+                    funder: frm.doc.funder || '',
+                    current_doc: frm.doc.name || ''
+                }
+            };
+        });
     },
 
     source_student: function (frm) {
@@ -80,9 +101,23 @@ frappe.ui.form.on('Student Refund', {
         frm.set_df_property('sponsorship_allocation', 'read_only', frm.doc.funder ? 0 : 1);
         frm.refresh_field('sponsorship_allocation');
 
+        // if (frm.doc.action_type === 'Receipt Cancellation') {
+        //     frappe.after_render(function () {
+        //         const grid = frm.get_field('cancellation_beneficiaries').grid;
+        //         if (grid) {
+        //             grid.cannot_add_rows = true;
+        //             grid.cannot_delete_rows = true;
+        //             grid.wrapper.find('.grid-add-row').hide();
+        //             grid.wrapper.find('.grid-remove-rows').hide();
+        //             grid.wrapper.find('.row-check').hide();
+        //         }
+        //     });
+        // }
+
         if (frm.doc.action_type === 'Receipt Cancellation') {
-            frappe.after_render(function () {
-                const grid = frm.get_field('cancellation_beneficiaries').grid;
+            setTimeout(function () {
+                const grid = frm.get_field('cancellation_beneficiaries') &&
+                    frm.get_field('cancellation_beneficiaries').grid;
                 if (grid) {
                     grid.cannot_add_rows = true;
                     grid.cannot_delete_rows = true;
@@ -90,7 +125,7 @@ frappe.ui.form.on('Student Refund', {
                     grid.wrapper.find('.grid-remove-rows').hide();
                     grid.wrapper.find('.row-check').hide();
                 }
-            });
+            }, 300);
         }
 
         frm.trigger('lock_narration_fields');
@@ -256,6 +291,14 @@ frappe.ui.form.on('Student Refund', {
         frm.trigger('toggle_fields');
         frm.trigger('add_print_cheque_button');
 
+        if (frm.doc.action_type !== 'Receipt Cancellation') {
+            frm.set_value('cheque_donation', '');
+            frm.clear_table('cancellation_allocations');
+            frm.clear_table('cancellation_beneficiaries');
+            frm.refresh_field('cancellation_allocations');
+            frm.refresh_field('cancellation_beneficiaries');
+        }
+
         // Reload sponsorship allocation data if already selected
         if (frm.doc.sponsorship_allocation) {
             frm.trigger('sponsorship_allocation');
@@ -264,11 +307,258 @@ frappe.ui.form.on('Student Refund', {
 
     funder: function (frm) {
         // Clear sponsorship allocation when funder changes
-        frm.set_value('sponsorship_allocation', '');
+        // frm.set_value('sponsorship_allocation', '');
 
-        // Enable/disable sponsorship_allocation based on whether funder is set
+        // // Enable/disable sponsorship_allocation based on whether funder is set
+        // frm.set_df_property('sponsorship_allocation', 'read_only', frm.doc.funder ? 0 : 1);
+        // frm.refresh_field('sponsorship_allocation');
+
+        frm.set_value('sponsorship_allocation', '');
+        frm.set_value('cheque_donation', '');
+        frm.clear_table('cancellation_allocations');
+        frm.clear_table('cancellation_beneficiaries');
+        frm.refresh_field('cancellation_allocations');
+        frm.refresh_field('cancellation_beneficiaries');
+
         frm.set_df_property('sponsorship_allocation', 'read_only', frm.doc.funder ? 0 : 1);
         frm.refresh_field('sponsorship_allocation');
+
+        frm.trigger('toggle_fields');
+    },
+
+    // cheque_donation: function (frm) {
+    //     if (!frm.doc.cheque_donation) {
+    //         frm.clear_table('cancellation_allocations');
+    //         frm.clear_table('cancellation_beneficiaries');
+    //         frm.refresh_field('cancellation_allocations');
+    //         frm.refresh_field('cancellation_beneficiaries');
+    //         return;
+    //     }
+
+    //     frappe.call({
+    //         method: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_cancellation_data',
+    //         args: {
+    //             donation: frm.doc.cheque_donation,
+    //             funder: frm.doc.funder
+    //         },
+    //         callback: function (r) {
+    //             if (!r.message) return;
+
+    //             let data = r.message;
+
+    //             // Fill cancellation_allocations table
+    //             frm.clear_table('cancellation_allocations');
+    //             (data.allocations || []).forEach(function (sa) {
+    //                 let row = frm.add_child('cancellation_allocations');
+    //                 row.sponsorship_allocation = sa.name;
+    //                 row.receipt_no = sa.receipt_no;
+    //                 row.amount = sa.amount;
+    //                 row.total_allocated = sa.total_allocated;
+    //             });
+    //             frm.refresh_field('cancellation_allocations');
+
+    //             // Fill cancellation_beneficiaries table
+    //             frm.clear_table('cancellation_beneficiaries');
+    //             (data.beneficiaries || []).forEach(function (b) {
+    //                 let row = frm.add_child('cancellation_beneficiaries');
+    //                 row.student = b.student;
+    //                 row.student_name = b.student_name;
+    //                 row.original_allocated_amount = b.amount;
+    //                 row.student_balance = 0;
+    //             });
+    //             frm.refresh_field('cancellation_beneficiaries');
+    //             frm.refresh();
+    //             frm.trigger('load_cancellation_balances');
+
+    //             frappe.show_alert({
+    //                 message: `Loaded ${data.allocations.length} allocations and ${data.beneficiaries.length} students`,
+    //                 indicator: 'green'
+    //             });
+    //         }
+    //     });
+    // },
+
+    // sponsorship_allocation: function (frm) {
+    //     if (!frm.doc.sponsorship_allocation) {
+    //         frm.set_value('batch_number', '');
+    //         frm.set_value('donation_amount', 0);
+    //         frm.set_value('custom_cheque_id', '');
+    //         frm.set_value('total_allocated_in_donation', 0);
+    //         frm.set_value('amount_refunded_to_donor', 0);
+    //         frm.clear_table('beneficiaries');
+    //         frm.clear_table('reallocations');
+    //         frm.clear_table('cancellation_beneficiaries');
+    //         frm.refresh_field('beneficiaries');
+    //         frm.refresh_field('reallocations');
+    //         frm.refresh_field('cancellation_beneficiaries');
+    //         return;
+    //     }
+
+    //     frappe.call({
+    //         method: 'frappe.client.get',
+    //         args: {
+    //             doctype: 'Sponsorship Allocation',
+    //             name: frm.doc.sponsorship_allocation
+    //         },
+    //         callback: function (r) {
+    //             if (!r.message) return;
+    //             let sa = r.message;
+
+    //             frm.set_value('donation_amount', sa.amount || 0);
+    //             frm.set_value('custom_cheque_id', sa.custom_cheque_id || '');
+    //             frm.set_value('total_allocated_in_donation', sa.total_allocated || 0);
+    //             frm.set_value('batch_number', frm.doc.sponsorship_allocation || '');
+
+    //             if (frm.doc.action_type === 'Refund to Funder') {
+    //                 frm.clear_table('beneficiaries');
+    //                 (sa.beneficiaries || []).forEach(function (b) {
+    //                     let row = frm.add_child('beneficiaries');
+    //                     row.student = b.student;
+    //                     row.student_name = b.student_name;
+    //                     row.original_allocated_amount = flt(b.amount);
+    //                     row.amount_to_be_refunded = 0;
+    //                     row.student_balance = 0;
+    //                 });
+    //                 frm.refresh_field('beneficiaries');
+    //                 frm.refresh();
+    //                 frm.trigger('load_student_balances');
+
+    //                 frappe.show_alert({
+    //                     message: `Loaded ${(sa.beneficiaries || []).length} beneficiaries`,
+    //                     indicator: 'green'
+    //                 });
+
+    //             } else if (frm.doc.action_type === 'Reallocate to Student') {
+    //                 frm.clear_table('reallocations');
+    //                 (sa.beneficiaries || []).forEach(function (b) {
+    //                     let row = frm.add_child('reallocations');
+    //                     row.source_student = b.student;
+    //                     row.student_name = b.student_name;
+    //                     row.original_allocated_amount = flt(b.amount);
+    //                     row.student_balance = 0;
+    //                     row.target_student = '';
+    //                     row.amount_to_reallocate = 0;
+    //                 });
+    //                 frm.refresh_field('reallocations');
+    //                 frm.refresh();
+    //                 frm.trigger('load_reallocation_balances');
+
+    //                 frappe.show_alert({
+    //                     message: `Loaded ${(sa.beneficiaries || []).length} source students for reallocation`,
+    //                     indicator: 'green'
+    //                 });
+
+    //             } else if (frm.doc.action_type === 'Receipt Cancellation') {
+    //                 frm.clear_table('cancellation_beneficiaries');
+    //                 (sa.beneficiaries || []).forEach(function (b) {
+    //                     let row = frm.add_child('cancellation_beneficiaries');
+    //                     row.student = b.student;
+    //                     row.student_name = b.student_name;
+    //                     row.original_allocated_amount = flt(b.amount);
+    //                     row.student_balance = 0;
+    //                 });
+    //                 frm.refresh_field('cancellation_beneficiaries');
+    //                 frm.refresh();
+    //                 frm.trigger('load_cancellation_balances');
+
+    //                 // ← ADD THIS after load_cancellation_balances
+    //                 frappe.after_render(function () {
+    //                     const grid = frm.get_field('cancellation_beneficiaries').grid;
+    //                     if (grid) {
+    //                         grid.cannot_add_rows = true;
+    //                         grid.cannot_delete_rows = true;
+    //                         grid.wrapper.find('.grid-add-row').hide();
+    //                         grid.wrapper.find('.grid-remove-rows').hide();
+    //                         grid.wrapper.find('.row-check').hide();
+    //                     }
+    //                 });
+
+    //                 frappe.show_alert({
+    //                     message: `Loaded ${(sa.beneficiaries || []).length} students for cancellation`,
+    //                     indicator: 'green'
+    //                 });
+    //             }
+    //         }
+    //     });
+    // },
+
+    // ─── LOAD BALANCES ────────────────────────────────────────────────────────
+
+    cheque_donation: function (frm) {
+        if (!frm.doc.cheque_donation) {
+            frm.clear_table('cancellation_allocations');
+            frm.clear_table('cancellation_beneficiaries');
+            frm.refresh_field('cancellation_allocations');
+            frm.refresh_field('cancellation_beneficiaries');
+            frm.trigger('toggle_fields');
+            return;
+        }
+
+        frappe.call({
+            method: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_cancellation_data',
+            args: {
+                donation: frm.doc.cheque_donation,
+                funder: frm.doc.funder
+            },
+            callback: function (r) {
+                if (!r.message) return;
+
+                let data = r.message;
+
+                // Clear tables regardless
+                frm.clear_table('cancellation_allocations');
+                frm.clear_table('cancellation_beneficiaries');
+
+                if (!data.allocations || data.allocations.length === 0) {
+                    // No allocations — clear and hide tables
+                    frm.refresh_field('cancellation_allocations');
+                    frm.refresh_field('cancellation_beneficiaries');
+                    frm.toggle_display('section_cancellation_allocations', false);
+                    frm.toggle_display('section_cancellation', false);
+                    frm.toggle_display('cancellation_beneficiaries', false);
+                    return;
+                }
+
+                // Fill cancellation_allocations table
+                (data.allocations || []).forEach(function (sa) {
+                    let row = frm.add_child('cancellation_allocations');
+                    row.sponsorship_allocation = sa.name;
+                    row.receipt_no = sa.receipt_no;
+                    row.amount = sa.amount;
+                    row.total_allocated = sa.total_allocated;
+                    row.balance = sa.balance;
+                });
+                frm.refresh_field('cancellation_allocations');
+
+                // Fill cancellation_beneficiaries — no duplicates since Python GROUPs by student
+                // (data.beneficiaries || []).forEach(function (b) {
+                //     let row = frm.add_child('cancellation_beneficiaries');
+                //     row.student = b.student;
+                //     row.student_name = b.student_name;
+                //     row.original_allocated_amount = b.amount;
+                //     row.student_balance = 0;
+                // });
+                (data.beneficiaries || []).forEach(function (b) {
+                    let row = frm.add_child('cancellation_beneficiaries');
+                    row.student = b.student;
+                    row.student_name = b.student_name;
+                    row.original_allocated_amount = b.amount;
+                    row.sponsorship_allocation = b.sponsorship_allocation;
+                    row.student_balance = 0;
+                });
+                frm.refresh_field('cancellation_beneficiaries');
+                frm.toggle_display('section_cancellation_allocations', true);
+                frm.toggle_display('section_cancellation', true);
+                frm.toggle_display('cancellation_beneficiaries', true);
+                frm.refresh();
+                frm.trigger('load_cancellation_balances');
+
+                frappe.show_alert({
+                    message: `Loaded ${data.allocations.length} allocations and ${data.beneficiaries.length} students`,
+                    indicator: 'green'
+                });
+            }
+        });
     },
 
     sponsorship_allocation: function (frm) {
@@ -280,10 +570,8 @@ frappe.ui.form.on('Student Refund', {
             frm.set_value('amount_refunded_to_donor', 0);
             frm.clear_table('beneficiaries');
             frm.clear_table('reallocations');
-            frm.clear_table('cancellation_beneficiaries');
             frm.refresh_field('beneficiaries');
             frm.refresh_field('reallocations');
-            frm.refresh_field('cancellation_beneficiaries');
             return;
         }
 
@@ -340,42 +628,11 @@ frappe.ui.form.on('Student Refund', {
                         message: `Loaded ${(sa.beneficiaries || []).length} source students for reallocation`,
                         indicator: 'green'
                     });
-
-                } else if (frm.doc.action_type === 'Receipt Cancellation') {
-                    frm.clear_table('cancellation_beneficiaries');
-                    (sa.beneficiaries || []).forEach(function (b) {
-                        let row = frm.add_child('cancellation_beneficiaries');
-                        row.student = b.student;
-                        row.student_name = b.student_name;
-                        row.original_allocated_amount = flt(b.amount);
-                        row.student_balance = 0;
-                    });
-                    frm.refresh_field('cancellation_beneficiaries');
-                    frm.refresh();
-                    frm.trigger('load_cancellation_balances');
-
-                    // ← ADD THIS after load_cancellation_balances
-                    frappe.after_render(function () {
-                        const grid = frm.get_field('cancellation_beneficiaries').grid;
-                        if (grid) {
-                            grid.cannot_add_rows = true;
-                            grid.cannot_delete_rows = true;
-                            grid.wrapper.find('.grid-add-row').hide();
-                            grid.wrapper.find('.grid-remove-rows').hide();
-                            grid.wrapper.find('.row-check').hide();
-                        }
-                    });
-
-                    frappe.show_alert({
-                        message: `Loaded ${(sa.beneficiaries || []).length} students for cancellation`,
-                        indicator: 'green'
-                    });
                 }
+                // ← Receipt Cancellation block REMOVED — handled by cheque_donation trigger
             }
         });
     },
-
-    // ─── LOAD BALANCES ────────────────────────────────────────────────────────
 
     load_student_balances: function (frm) {
         (frm.doc.beneficiaries || []).forEach(function (row) {
@@ -501,6 +758,14 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('hostel_session', is_hostel);
         frm.toggle_display('hostel_semester', is_hostel);
         frm.toggle_display('narration', is_hostel);
+
+
+        // Hide sponsorship_allocation for Receipt Cancellation — use cheque_donation instead
+        frm.toggle_display('section_donation', is_funder && !is_cancellation);
+        frm.toggle_display('sponsorship_allocation', is_funder && !is_cancellation);
+        // frm.toggle_display('section_cheque_cancellation', is_funder && is_cancellation);
+        frm.toggle_display('section_cheque_cancellation', is_funder && is_cancellation && !!frm.doc.funder);
+        frm.toggle_display('section_cancellation_allocations', is_funder && is_cancellation && !!frm.doc.cheque_donation);
     }
 
 });

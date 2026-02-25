@@ -6,11 +6,9 @@ from frappe.model.document import Document
 class StudentRefund(Document):
 
     def before_save(self):
-        frappe.msgprint("✅ before save  trail() was called", indicator="green", alert=True)
         self.capture_remark_trail()
 
     def before_submit(self):
-        frappe.msgprint("✅ before submit  trail() was called", indicator="green", alert=True)
         self.capture_remark_trail()
 
     def validate(self):
@@ -29,7 +27,6 @@ class StudentRefund(Document):
             self.validate_hostel_items()
     
     def capture_remark_trail(self):
-        frappe.msgprint("✅ capture_remark_trail() was called", indicator="green", alert=True)
         remark_fields = [
             ("accountant_narration", "Student Finance Accountant"),
             ("finance_officer_narration", "Finance Officer"),
@@ -72,17 +69,41 @@ class StudentRefund(Document):
         if self.request_type == "Hostel":
             self.total_amount = sum(flt(row.refundable_amount) for row in (self.items or []))
 
-    def validate_mandatory_fields(self):
+    # def validate_mandatory_fields(self):
 
+    #     if self.request_type in ('HELB', 'CDF', 'Scholarship'):
+    #         if not self.sponsorship_allocation:
+    #             frappe.throw(
+    #                 "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
+    #                 title="Missing Field"
+    #             )
+
+    #     if self.action_type == 'Refund to Funder' and \
+    #        self.request_type in ('HELB', 'CDF', 'Scholarship'):
+    #         if not self.bank_account:
+    #             frappe.throw(
+    #                 "Payment Bank Account is required for Refund to Funder.",
+    #                 title="Missing Field"
+    #             )
+
+    def validate_mandatory_fields(self):
         if self.request_type in ('HELB', 'CDF', 'Scholarship'):
-            if not self.sponsorship_allocation:
-                frappe.throw(
-                    "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
-                    title="Missing Field"
-                )
+            if self.action_type == 'Receipt Cancellation':
+                # Receipt Cancellation uses cheque_donation instead
+                if not self.cheque_donation:
+                    frappe.throw(
+                        "Donation (Cheque) is required for Receipt Cancellation.",
+                        title="Missing Field"
+                    )
+            else:
+                if not self.sponsorship_allocation:
+                    frappe.throw(
+                        "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
+                        title="Missing Field"
+                    )
 
         if self.action_type == 'Refund to Funder' and \
-           self.request_type in ('HELB', 'CDF', 'Scholarship'):
+        self.request_type in ('HELB', 'CDF', 'Scholarship'):
             if not self.bank_account:
                 frappe.throw(
                     "Payment Bank Account is required for Refund to Funder.",
@@ -432,8 +453,6 @@ def get_hostel_invoices(doctype, txt, searchfield, start, page_len, filters):
 def before_update_after_submit(self, method=None):
     self.flags.ignore_mandatory = True
     # self._protect_narration_fields()
-
-    frappe.msgprint("✅ before_update_after_submit trail() was called", indicator="green", alert=True)
     self.capture_remark_trail()
 
 
@@ -485,3 +504,162 @@ def append_remark_to_trail(doc, remark_field, role_label):
 #         if role not in user_roles:
 #             saved_value = saved.get(fieldname) if saved else None
 #             self.set(fieldname, saved_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@frappe.whitelist()
+def get_cheque_donations(doctype, txt, searchfield, start, page_len, filters):
+    import json
+
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    funder = filters.get("funder") or ""
+    current_doc = filters.get("current_doc") or ""
+
+    txt_clause = "AND (d.name LIKE %s OR d.custom_cheque_id LIKE %s)" if txt else ""
+    values = [funder]
+
+    if txt:
+        values.extend([f"%{txt}%", f"%{txt}%"])
+
+    values.extend([int(page_len), int(start)])
+
+    return frappe.db.sql(f"""
+        SELECT d.name, d.custom_cheque_id, d.amount, d.date
+        FROM `tabDonation` d
+        WHERE d.docstatus = 1
+        AND d.donor = %s
+        AND d.name != %s
+        AND d.name NOT IN (
+            SELECT DISTINCT sa.donation
+            FROM `tabSponsorship Allocation` sa
+            INNER JOIN `tabStudent Refund` sr ON sr.sponsorship_allocation = sa.name
+            WHERE sa.donor = %s
+            AND sa.docstatus = 1
+            AND sr.action_type IN ('Refund to Funder', 'Receipt Cancellation')
+            AND sr.docstatus != 2
+            AND sa.donation IS NOT NULL
+            AND sa.donation != ''
+        )
+        {txt_clause}
+        ORDER BY d.date DESC
+        LIMIT %s OFFSET %s
+    """, [funder, current_doc, funder] + ([f"%{txt}%", f"%{txt}%"] if txt else []) + [int(page_len), int(start)])
+
+
+# @frappe.whitelist()
+# def get_cancellation_data(donation, funder):
+#     """
+#     Given a Donation, return:
+#     - All Sponsorship Allocations linked to it
+#     - All unique beneficiaries across those allocations
+#     """
+#     # Get all Sponsorship Allocations for this donation
+#     allocations = frappe.db.sql("""
+#         SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated
+#         FROM `tabSponsorship Allocation` sa
+#         WHERE sa.donation = %s
+#         AND sa.docstatus = 1
+#     """, (donation,), as_dict=True)
+
+#     if not allocations:
+#         frappe.throw(
+#             f"No Sponsorship Allocations found for this Donation.",
+#             title="No Allocations Found"
+#         )
+
+#     # Get all beneficiaries across all those allocations
+#     sa_names = [sa['name'] for sa in allocations]
+#     placeholders = ", ".join(["%s"] * len(sa_names))
+
+#     beneficiaries_raw = frappe.db.sql(f"""
+#         SELECT DISTINCT
+#             sab.student,
+#             sab.student_name,
+#             SUM(sab.amount) as amount
+#         FROM `tabSponsorship Allocation Beneficiary` sab
+#         WHERE sab.parent IN ({placeholders})
+#         GROUP BY sab.student, sab.student_name
+#         ORDER BY sab.student_name
+#     """, sa_names, as_dict=True)
+
+#     return {
+#         "allocations": allocations,
+#         "beneficiaries": beneficiaries_raw
+#     }
+
+
+@frappe.whitelist()
+def get_cancellation_data(donation, funder):
+    # allocations = frappe.db.sql("""
+    #     SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated
+    #     FROM `tabSponsorship Allocation` sa
+    #     WHERE sa.donation = %s
+    #     AND sa.docstatus = 1
+    # """, (donation,), as_dict=True)
+
+    allocations = frappe.db.sql("""
+        SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated, sa.balance
+        FROM `tabSponsorship Allocation` sa
+        WHERE sa.donation = %s
+        AND sa.docstatus = 1
+    """, (donation,), as_dict=True)
+
+    if not allocations:
+        frappe.msgprint(
+            "No Sponsorship Allocations found for this Donation.",
+            title="No Allocations Found",
+            indicator="blue"
+        )
+        return {
+            "allocations": [],
+            "beneficiaries": []
+        }
+
+    sa_names = [sa['name'] for sa in allocations]
+    placeholders = ", ".join(["%s"] * len(sa_names))
+
+    # GROUP BY student to prevent duplicates across multiple allocations
+    # beneficiaries_raw = frappe.db.sql(f"""
+    #     SELECT
+    #         sab.student,
+    #         sab.student_name,
+    #         SUM(sab.amount) as amount
+    #     FROM `tabSponsorship Allocation Beneficiary` sab
+    #     WHERE sab.parent IN ({placeholders})
+    #     GROUP BY sab.student, sab.student_name
+    #     ORDER BY sab.student_name
+    # """, sa_names, as_dict=True)
+
+    beneficiaries_raw = frappe.db.sql(f"""
+        SELECT
+            sab.student,
+            sab.student_name,
+            sab.amount,
+            sab.parent as sponsorship_allocation
+        FROM `tabSponsorship Allocation Beneficiary` sab
+        WHERE sab.parent IN ({placeholders})
+        ORDER BY sab.student_name, sab.parent
+    """, sa_names, as_dict=True)
+
+    return {
+        "allocations": allocations,
+        "beneficiaries": beneficiaries_raw
+    }

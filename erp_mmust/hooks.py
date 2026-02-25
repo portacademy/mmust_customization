@@ -266,6 +266,10 @@ fixtures = [
                 "Donation-custom_bank_account"
             ]]
         ]
+    },
+    {
+        "doctype": "Workflow",
+        "filters": [["name", "=", "Student Refund Workflow"]]
     }
 ]
 

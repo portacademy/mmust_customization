@@ -1,0 +1,44 @@
+{
+    "doctype": "DocType",
+    "name": "Student Refund Cancellation Allocation",
+    "istable": 1,
+    "module": "Erp Mmust",
+    "fields": [
+        {
+            "fieldname": "sponsorship_allocation",
+            "label": "Sponsorship Allocation",
+            "fieldtype": "Link",
+            "options": "Sponsorship Allocation",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "receipt_no",
+            "label": "Receipt No",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "amount",
+            "label": "Amount",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "balance",
+            "label": "Available Balance",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "total_allocated",
+            "label": "Total Allocated",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "in_list_view": 1
+        }
+    ]
+}

@@ -1,0 +1,428 @@
+{
+    "creation": "2026-02-20 20:44:28.503184",
+    "docstatus": 0,
+    "doctype": "Workflow",
+    "document_type": "Student Refund",
+    "idx": 0,
+    "is_active": 1,
+    "modified": "2026-02-24 22:14:46.756045",
+    "modified_by": "t.ajani@rhocom.ng",
+    "name": "Student Refund Workflow",
+    "override_status": 0,
+    "owner": "t.ajani@rhocom.ng",
+    "send_email_alert": 1,
+    "states": [
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "0",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Draft"
+        },
+        {
+            "allow_edit": "DVC Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending DVC"
+        },
+        {
+            "allow_edit": "Internal Auditor",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Under Audit"
+        },
+        {
+            "allow_edit": "DVC Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Audit Approved"
+        },
+        {
+            "allow_edit": "Student Finance Accountant",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Ready for Execution"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Revision Required"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending Receipt Approval"
+        },
+        {
+            "allow_edit": "Student Finance Accountant",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Receipt Cancelled"
+        },
+        {
+            "allow_edit": "Payable Accountant",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending PV"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO PV Approval"
+        },
+        {
+            "allow_edit": "DVC Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending Final Approval"
+        },
+        {
+            "allow_edit": "Accounts Manager",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Closed"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO Hostel Approval"
+        },
+        {
+            "allow_edit": "Accounts Manager",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Hostel Closed"
+        },
+        {
+            "allow_edit": "Student Finance Accountant",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending SFA Verification"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO Concurrence"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO Review"
+        },
+        {
+            "allow_edit": "Student Finance Accountant",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending SFA Computation"
+        }
+    ],
+    "transitions": [
+        {
+            "action": "Submit for SFA Verification",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type != \"Hostel\"",
+            "next_state": "Pending SFA Verification",
+            "send_email_to_creator": 0,
+            "state": "Draft"
+        },
+        {
+            "action": "Submit Hostel Reveral",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Hostel\"",
+            "next_state": "Pending SFA Computation",
+            "send_email_to_creator": 0,
+            "state": "Draft"
+        },
+        {
+            "action": "Verified - Route to FO for Concurrence",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "next_state": "Pending FO Concurrence",
+            "send_email_to_creator": 0,
+            "state": "Pending SFA Verification"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "next_state": "Revision Required",
+            "send_email_to_creator": 0,
+            "state": "Pending SFA Verification"
+        },
+        {
+            "action": "Concur & Forward to DVC",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Pending DVC",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Concurrence"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Pending SFA Verification",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Concurrence"
+        },
+        {
+            "action": "Forward To Internal Audit",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Under Audit",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Pending FO Concurrence",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC"
+        },
+        {
+            "action": "Verify & Approve",
+            "allow_self_approval": 1,
+            "allowed": "Internal Auditor",
+            "next_state": "Audit Approved",
+            "send_email_to_creator": 0,
+            "state": "Under Audit"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Internal Auditor",
+            "next_state": "Pending DVC",
+            "send_email_to_creator": 0,
+            "state": "Under Audit"
+        },
+        {
+            "action": "Final Approve & Route to FO",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Pending FO Review",
+            "send_email_to_creator": 0,
+            "state": "Audit Approved"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Under Audit",
+            "send_email_to_creator": 0,
+            "state": "Audit Approved"
+        },
+        {
+            "action": "Route to SFA for Execution",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Ready for Execution",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Review"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Audit Approved",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Review"
+        },
+        {
+            "action": "Resubmit",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type != \"Hostel\"",
+            "next_state": "Pending SFA Verification",
+            "send_email_to_creator": 0,
+            "state": "Revision Required"
+        },
+        {
+            "action": "Resubmit Hostel Reversal",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Hostel\"",
+            "next_state": "Pending SFA Computation",
+            "send_email_to_creator": 0,
+            "state": "Revision Required"
+        },
+        {
+            "action": "Request Receipt Cancellation",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "condition": "doc.action_type == \"Receipt Cancellation\"",
+            "next_state": "Pending Receipt Approval",
+            "send_email_to_creator": 0,
+            "state": "Ready for Execution"
+        },
+        {
+            "action": "Generate New Receipt - Reallocation",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "condition": "doc.action_type == \"Reallocate to Student\"",
+            "next_state": "Closed",
+            "send_email_to_creator": 0,
+            "state": "Ready for Execution"
+        },
+        {
+            "action": "Forward To Payable Accountant",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "condition": "doc.action_type == \"Refund to Funder\"",
+            "next_state": "Pending PV",
+            "send_email_to_creator": 0,
+            "state": "Ready for Execution"
+        },
+        {
+            "action": "Approve Cancellation",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Receipt Cancelled",
+            "send_email_to_creator": 0,
+            "state": "Pending Receipt Approval"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Ready for Execution",
+            "send_email_to_creator": 0,
+            "state": "Pending Receipt Approval"
+        },
+        {
+            "action": "Close",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "condition": "doc.action_type == \"Receipt Cancellation\"",
+            "next_state": "Closed",
+            "send_email_to_creator": 0,
+            "state": "Receipt Cancelled"
+        },
+        {
+            "action": "Payment Voucher Prepared",
+            "allow_self_approval": 1,
+            "allowed": "Payable Accountant",
+            "next_state": "Pending FO PV Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending PV"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Payable Accountant",
+            "next_state": "Ready for Execution",
+            "send_email_to_creator": 0,
+            "state": "Pending PV"
+        },
+        {
+            "action": "Approve Payment Voucher",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Pending Final Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending FO PV Approval"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Pending PV",
+            "send_email_to_creator": 0,
+            "state": "Pending FO PV Approval"
+        },
+        {
+            "action": "Final Approve & Close",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Closed",
+            "send_email_to_creator": 0,
+            "state": "Pending Final Approval"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "next_state": "Pending FO PV Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending Final Approval"
+        },
+        {
+            "action": "Approve & Post Credit Note",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Hostel Closed",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Hostel Approval"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "next_state": "Pending SFA Computation",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Hostel Approval"
+        },
+        {
+            "action": "Submit Draft for FO Approval",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "next_state": "Pending FO Hostel Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending SFA Computation"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Student Finance Accountant",
+            "next_state": "Revision Required",
+            "send_email_to_creator": 0,
+            "state": "Pending SFA Computation"
+        }
+    ],
+    "workflow_name": "Student Refund Workflow",
+    "workflow_state_field": "workflow_state"
+}
