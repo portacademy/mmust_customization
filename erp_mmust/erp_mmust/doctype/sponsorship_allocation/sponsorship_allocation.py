@@ -287,30 +287,6 @@ def distribute_amount_equally(students, total_amount):
 
 
 
-
-
-
-
-# @frappe.whitelist()
-# @frappe.validate_and_sanitize_search_inputs
-# def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
-#     donor = filters.get('donor')
-#     return frappe.db.sql("""
-#         SELECT name, amount, date 
-#         FROM `tabDonation`
-#         WHERE donor = %(donor)s 
-#         AND docstatus = 1
-#         AND (name LIKE %(txt)s OR amount LIKE %(txt)s)
-#         ORDER BY date DESC, creation DESC
-#         LIMIT %(page_len)s OFFSET %(start)s
-#     """, {
-#         'donor': donor,
-#         'txt': f'%{txt}%',
-#         'page_len': page_len,
-#         'start': start
-#     })
-
-
 @frappe.whitelist()
 def get_donor_donations(doctype, txt, searchfield, start, page_len, filters):
     import json

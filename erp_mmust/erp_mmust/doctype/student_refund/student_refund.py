@@ -474,51 +474,6 @@ def append_remark_to_trail(doc, remark_field, role_label):
     existing = doc.remarks_trail or ""
     doc.remarks_trail = f"{existing}\n{entry}".strip()
 
-#  def _protect_narration_fields(self):
-#     """Ensure users can only update their own narration field after submit"""
-#     role_field_map = {
-#         'Student Finance Accountant': 'accountant_narration',
-#         'Finance Officer':            'finance_officer_narration',
-#         'Internal Auditor':           'internal_auditor_narration',
-#         'Payable Accountant':         'payable_accountant_narration',
-#         'DVC Finance':                'dvc_narration',
-#         'Accounts Manager':           'accounts_manager_narration'
-#     }
-
-#     user_roles = frappe.get_roles(frappe.session.user)
-
-#     # Accounts Manager can edit all — skip protection
-#     if 'Accounts Manager' in user_roles:
-#         return
-
-#     # Get the saved (original) values from DB
-#     saved = frappe.db.get_value(
-#         "Student Refund",
-#         self.name,
-#         list(role_field_map.values()),
-#         as_dict=True
-#     )
-
-#     for role, fieldname in role_field_map.items():
-#         # If user does NOT have this role, revert field to saved value
-#         if role not in user_roles:
-#             saved_value = saved.get(fieldname) if saved else None
-#             self.set(fieldname, saved_value)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @frappe.whitelist()
@@ -561,47 +516,6 @@ def get_cheque_donations(doctype, txt, searchfield, start, page_len, filters):
         LIMIT %s OFFSET %s
     """, [funder, current_doc, funder] + ([f"%{txt}%", f"%{txt}%"] if txt else []) + [int(page_len), int(start)])
 
-
-# @frappe.whitelist()
-# def get_cancellation_data(donation, funder):
-#     """
-#     Given a Donation, return:
-#     - All Sponsorship Allocations linked to it
-#     - All unique beneficiaries across those allocations
-#     """
-#     # Get all Sponsorship Allocations for this donation
-#     allocations = frappe.db.sql("""
-#         SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated
-#         FROM `tabSponsorship Allocation` sa
-#         WHERE sa.donation = %s
-#         AND sa.docstatus = 1
-#     """, (donation,), as_dict=True)
-
-#     if not allocations:
-#         frappe.throw(
-#             f"No Sponsorship Allocations found for this Donation.",
-#             title="No Allocations Found"
-#         )
-
-#     # Get all beneficiaries across all those allocations
-#     sa_names = [sa['name'] for sa in allocations]
-#     placeholders = ", ".join(["%s"] * len(sa_names))
-
-#     beneficiaries_raw = frappe.db.sql(f"""
-#         SELECT DISTINCT
-#             sab.student,
-#             sab.student_name,
-#             SUM(sab.amount) as amount
-#         FROM `tabSponsorship Allocation Beneficiary` sab
-#         WHERE sab.parent IN ({placeholders})
-#         GROUP BY sab.student, sab.student_name
-#         ORDER BY sab.student_name
-#     """, sa_names, as_dict=True)
-
-#     return {
-#         "allocations": allocations,
-#         "beneficiaries": beneficiaries_raw
-#     }
 
 
 @frappe.whitelist()
