@@ -216,11 +216,28 @@ frappe.ui.form.on('Student Refund', {
 
         } else if (!is_submitted) {
             // On draft — only Finance Officer can write their narration
-            if (user_roles.includes('Finance Officer')) {
-                frm.set_df_property('finance_officer_narration', 'read_only', 0);
-            }
-            if (user_roles.includes('Registrar')) {
-                frm.set_df_property('registrar_narration', 'read_only', 0);
+            // if (user_roles.includes('Finance Officer')) {
+            //     frm.set_df_property('finance_officer_narration', 'read_only', 0);
+            // }
+            // if (user_roles.includes('Registrar')) {
+            //     frm.set_df_property('registrar_narration', 'read_only', 0);
+            // }
+
+            const is_graduation_refund = frm.doc.request_type === 'Graduation' &&
+                frm.doc.action_type === 'Refund a Student';
+
+            if (is_graduation_refund) {
+                // Graduation Refund Draft — only Registrar can write
+                if (user_roles.includes('Registrar')) {
+                    frm.set_df_property('registrar_narration', 'read_only', 0);
+                    frm.set_df_property('section_narrations', 'collapsible', 0);
+                    frm.refresh_field('section_narrations');
+                }
+            } else {
+                // All other drafts — only Finance Officer can write
+                if (user_roles.includes('Finance Officer')) {
+                    frm.set_df_property('finance_officer_narration', 'read_only', 0);
+                }
             }
 
         } else {

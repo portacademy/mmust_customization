@@ -637,7 +637,6 @@ def get_cancellation_data(donation, funder):
     }
 
 
-
 @frappe.whitelist()
 def get_graduation_student_balance(customer):
     """
