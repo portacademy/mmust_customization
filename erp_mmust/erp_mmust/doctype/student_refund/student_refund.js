@@ -253,6 +253,73 @@ frappe.ui.form.on('Student Refund', {
     //     frm.refresh_fields(Object.values(role_field_map));
     // },
 
+    // lock_narration_fields: function (frm) {
+    //     const role_field_map = {
+    //         'Registrar': 'registrar_narration',
+    //         'Senior Accountant Students Finance': 'senior_accountant_narration',
+    //         'Student Finance Accountant': 'accountant_narration',
+    //         'Finance Officer': 'finance_officer_narration',
+    //         'Internal Auditor': 'internal_auditor_narration',
+    //         'Payable Accountant': 'payable_accountant_narration',
+    //         'DVC Finance': 'dvc_narration',
+    //     };
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_submitted = frm.doc.docstatus === 1;
+    //     const workflow_state = frm.doc.workflow_state;
+
+    //     // Lock ALL narration fields first — always
+    //     Object.values(role_field_map).forEach(function (fieldname) {
+    //         frm.set_df_property(fieldname, 'read_only', 1);
+    //     });
+
+    //     const terminal_states = ['Closed', 'Receipt Cancelled', 'Hostel Closed'];
+    //     const is_closed = terminal_states.includes(workflow_state);
+
+    //     // Hide ALL individual narration fields when Closed — only trail remains
+    //     if (is_closed) {
+    //         Object.values(role_field_map).forEach(function (fieldname) {
+    //             frm.toggle_display(fieldname, false);
+    //         });
+    //         frm.toggle_display('section_narrations', false);
+    //         frm.refresh_fields(Object.values(role_field_map));
+    //         return; // exit early
+    //     }
+
+    //     // Accounts Manager can edit all regardless of docstatus
+    //     if (user_roles.includes('Accounts Manager')) {
+    //         Object.values(role_field_map).forEach(function (fieldname) {
+    //             frm.set_df_property(fieldname, 'read_only', 0);
+    //         });
+
+    //     } else if (!is_submitted) {
+    //         const is_graduation_refund = frm.doc.request_type === 'Graduation' &&
+    //             frm.doc.action_type === 'Refund a Student';
+
+    //         if (is_graduation_refund) {
+    //             if (user_roles.includes('Registrar')) {
+    //                 frm.set_df_property('registrar_narration', 'read_only', 0);
+    //                 frm.set_df_property('section_narrations', 'collapsible', 0);
+    //                 frm.refresh_field('section_narrations');
+    //             }
+    //         } else {
+    //             if (user_roles.includes('Finance Officer')) {
+    //                 frm.set_df_property('finance_officer_narration', 'read_only', 0);
+    //             }
+    //         }
+
+    //     } else {
+    //         // On submitted — unlock only the field matching the user's role
+    //         Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+    //             if (user_roles.includes(role)) {
+    //                 frm.set_df_property(fieldname, 'read_only', 0);
+    //             }
+    //         });
+    //     }
+
+    //     frm.refresh_fields(Object.values(role_field_map));
+    // },
+
     lock_narration_fields: function (frm) {
         const role_field_map = {
             'Registrar': 'registrar_narration',
@@ -267,14 +334,13 @@ frappe.ui.form.on('Student Refund', {
         const user_roles = frappe.user_roles || [];
         const is_submitted = frm.doc.docstatus === 1;
         const workflow_state = frm.doc.workflow_state;
+        const terminal_states = ['Closed', 'Receipt Cancelled', 'Hostel Closed'];
+        const is_closed = terminal_states.includes(workflow_state);
 
         // Lock ALL narration fields first — always
         Object.values(role_field_map).forEach(function (fieldname) {
             frm.set_df_property(fieldname, 'read_only', 1);
         });
-
-        const terminal_states = ['Closed', 'Receipt Cancelled', 'Hostel Closed'];
-        const is_closed = terminal_states.includes(workflow_state);
 
         // Hide ALL individual narration fields when Closed — only trail remains
         if (is_closed) {
@@ -282,13 +348,16 @@ frappe.ui.form.on('Student Refund', {
                 frm.toggle_display(fieldname, false);
             });
             frm.toggle_display('section_narrations', false);
+            frm.toggle_display('section_narrations_2', false);
+            frm.toggle_display('section_narrations_3', false);
             frm.refresh_fields(Object.values(role_field_map));
-            return; // exit early
+            return;
         }
 
-        // Accounts Manager can edit all regardless of docstatus
+        // Accounts Manager sees and edits all
         if (user_roles.includes('Accounts Manager')) {
-            Object.values(role_field_map).forEach(function (fieldname) {
+            Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+                frm.toggle_display(fieldname, true);
                 frm.set_df_property(fieldname, 'read_only', 0);
             });
 
@@ -296,22 +365,29 @@ frappe.ui.form.on('Student Refund', {
             const is_graduation_refund = frm.doc.request_type === 'Graduation' &&
                 frm.doc.action_type === 'Refund a Student';
 
+            // Hide all first, then show only relevant
+            Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+                const belongs_to_user = user_roles.includes(role);
+                frm.toggle_display(fieldname, belongs_to_user);
+                if (belongs_to_user) {
+                    frm.set_df_property(fieldname, 'read_only', 0);
+                }
+            });
+
+            // Extra: on draft, only Registrar (graduation) or Finance Officer (others) should write
             if (is_graduation_refund) {
                 if (user_roles.includes('Registrar')) {
-                    frm.set_df_property('registrar_narration', 'read_only', 0);
                     frm.set_df_property('section_narrations', 'collapsible', 0);
                     frm.refresh_field('section_narrations');
-                }
-            } else {
-                if (user_roles.includes('Finance Officer')) {
-                    frm.set_df_property('finance_officer_narration', 'read_only', 0);
                 }
             }
 
         } else {
-            // On submitted — unlock only the field matching the user's role
+            // On submitted — show only the field for the user's role, hide the rest
             Object.entries(role_field_map).forEach(function ([role, fieldname]) {
-                if (user_roles.includes(role)) {
+                const belongs_to_user = user_roles.includes(role);
+                frm.toggle_display(fieldname, belongs_to_user);
+                if (belongs_to_user) {
                     frm.set_df_property(fieldname, 'read_only', 0);
                 }
             });
@@ -319,7 +395,6 @@ frappe.ui.form.on('Student Refund', {
 
         frm.refresh_fields(Object.values(role_field_map));
     },
-
 
 
     // lock_graduation_fields: function (frm) {
