@@ -416,7 +416,15 @@
             "fieldname": "section_narrations",
             "label": "Remarks",
             "fieldtype": "Section Break",
-            "collapsible": 1
+            "collapsible": 0
+        },
+        {
+            "fieldname": "registrar_narration",
+            "label": "Registrar Remark",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "read_only": 1,
+            "description": "Remark by Registrar"
         },
         {
             "fieldname": "accountant_narration",
@@ -485,14 +493,6 @@
         {
             "fieldname": "col_break_narration_3",
             "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "registrar_narration",
-            "label": "Registrar Remark",
-            "fieldtype": "Small Text",
-            "allow_on_submit": 1,
-            "read_only": 1,
-            "description": "Remark by Registrar"
         },
         {
             "fieldname": "section_remarks_trail",
