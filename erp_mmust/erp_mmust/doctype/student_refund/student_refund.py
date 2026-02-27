@@ -8,8 +8,42 @@ class StudentRefund(Document):
     def before_save(self):
         self.capture_remark_trail()
 
+
+    def validate_graduation_refund_amount(self):
+        if self.request_type != 'Graduation' or self.action_type != 'Refund a Student':
+            return
+        
+        if not self.graduation_amount_to_refund or self.graduation_amount_to_refund <= 0:
+            frappe.throw(
+                "Please enter the Amount to Refund before forwarding.",
+                title="Amount Required"
+            )
+        
+        if not self.graduation_bank_account:
+            frappe.throw(
+                "Please select the Bank to Refund before forwarding.",
+                title="Bank Account Required"
+            )
+
+        if self.graduation_ledger_balance >= 0:
+            frappe.throw("Student does not have a credit balance. Cannot process refund.")
+
+        credit_balance = abs(self.graduation_ledger_balance)
+        if self.graduation_amount_to_refund > credit_balance:
+            frappe.throw(
+                f"Amount to Refund ({frappe.format_value(self.graduation_amount_to_refund, 'Currency')}) "
+                f"cannot exceed the student's credit balance "
+                f"({frappe.format_value(credit_balance, 'Currency')})."
+            )
+
     def before_submit(self):
         self.capture_remark_trail()
+        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
+            if not self.graduation_student:
+                frappe.throw(
+                    "Please select a Student before submitting.",
+                    title="Student Required"
+                )
 
     def after_insert(self):
         if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
@@ -32,6 +66,11 @@ class StudentRefund(Document):
             self.validate_hostel_items()
         elif self.action_type == 'Refund a Student' and self.request_type == 'Graduation':
             self.validate_graduation_refund()
+
+    def on_workflow_action(self, action):
+        if action == 'Forward Processed Voucher to FO':
+            self.validate_graduation_refund_amount()
+
     
     def capture_remark_trail(self):
         remark_fields = [
@@ -122,10 +161,6 @@ class StudentRefund(Document):
         if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
             if not self.graduation_student:
                 frappe.throw("Student is required for Graduation Refund.", title="Missing Field")
-            if not self.graduation_amount_to_refund or flt(self.graduation_amount_to_refund) <= 0:
-                frappe.throw("Amount to Refund must be greater than zero.", title="Missing Field")
-            if not self.graduation_bank_account:
-                frappe.throw("Bank to Refund is required for Graduation Refund.", title="Missing Field")
 
     # ─── REFUND TO FUNDER VALIDATIONS ────────────────────────────────────────
 
