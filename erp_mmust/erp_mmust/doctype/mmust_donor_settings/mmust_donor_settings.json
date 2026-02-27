@@ -133,6 +133,26 @@
             "fieldname": "accountant_signature",
             "label": "Accountant Signature",
             "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "registrar_name",
+            "label": "Registrar Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "registrar_signature",
+            "label": "Accountant Signature",
+            "fieldtype": "Attach Image"
+        },
+        {
+            "fieldname": "senior_accountant_students_finance_name",
+            "label": "Senior Accountant Students Finance Name",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "senior_accountant_students_finance_signature",
+            "label": "Senior Accountant Students Finance Signature",
+            "fieldtype": "Attach Image"
         }
     ],
     "permissions": [
