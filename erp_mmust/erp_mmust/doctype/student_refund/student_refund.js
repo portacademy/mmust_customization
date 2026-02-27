@@ -69,6 +69,23 @@ frappe.ui.form.on('Student Refund', {
                 }
             };
         });
+        frm.set_query('graduation_student', function () {
+            return {
+                filters: {
+                    customer_group: 'Student'
+                }
+            };
+        });
+
+        frm.set_query('graduation_bank_account', function () {
+            return {
+                filters: {
+                    account_type: 'Bank',
+                    is_group: 0,
+                    company: frappe.defaults.get_user_default('company')
+                }
+            };
+        });
     },
 
     source_student: function (frm) {
@@ -173,12 +190,14 @@ frappe.ui.form.on('Student Refund', {
 
     lock_narration_fields: function (frm) {
         const role_field_map = {
+            'Registrar': 'registrar_narration',
+            'Senior Accountant Students Finance': 'senior_accountant_narration',
             'Student Finance Accountant': 'accountant_narration',
             'Finance Officer': 'finance_officer_narration',
             'Internal Auditor': 'internal_auditor_narration',
             'Payable Accountant': 'payable_accountant_narration',
             'DVC Finance': 'dvc_narration',
-            'Accounts Manager': 'accounts_manager_narration'
+            // 'Accounts Manager': 'accounts_manager_narration'
         };
 
         const user_roles = frappe.user_roles || [];
@@ -199,6 +218,9 @@ frappe.ui.form.on('Student Refund', {
             // On draft — only Finance Officer can write their narration
             if (user_roles.includes('Finance Officer')) {
                 frm.set_df_property('finance_officer_narration', 'read_only', 0);
+            }
+            if (user_roles.includes('Registrar')) {
+                frm.set_df_property('registrar_narration', 'read_only', 0);
             }
 
         } else {
@@ -228,7 +250,8 @@ frappe.ui.form.on('Student Refund', {
         frappe.db.get_value('MMUST Donor Settings', 'MMUST Donor Settings', [
             'refund_print_format',
             'receipt_cancellation_print_format',
-            'reallocation_print_format'
+            'reallocation_print_format',
+            'graduation_refund_print_format'
         ], function (settings) {
 
             if (frm.doc.action_type === 'Refund to Funder' &&
@@ -260,6 +283,16 @@ frappe.ui.form.on('Student Refund', {
                     window.open(url, '_blank');
                 }, __('Actions'));
             }
+
+            if (frm.doc.action_type === 'Refund a Student' &&
+                frm.doc.workflow_state === 'Closed') {
+
+                const format = settings.graduation_refund_print_format || 'Graduation Refund Print Format';
+                frm.add_custom_button(__('Print Graduation Refund'), function () {
+                    const url = `/printview?doctype=${encodeURIComponent('Student Refund')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
+                    window.open(url, '_blank');
+                }, __('Actions'));
+            }
         });
     },
 
@@ -278,6 +311,13 @@ frappe.ui.form.on('Student Refund', {
             frm.refresh_field('reallocations');
             frm.refresh_field('cancellation_beneficiaries');
         }
+
+        // if (frm.doc.request_type === 'Graduation' &&
+        //     frm.doc.action_type === 'Refund a Student' &&
+        //     frm.doc.docstatus === 0 &&
+        //     frm.doc.workflow_state === 'Draft') {
+        //     frm.set_value('workflow_state', 'Graduation Refund Draft');
+        // }
     },
 
     action_type: function (frm) {
@@ -303,6 +343,13 @@ frappe.ui.form.on('Student Refund', {
         if (frm.doc.sponsorship_allocation) {
             frm.trigger('sponsorship_allocation');
         }
+
+        // if (frm.doc.request_type === 'Graduation' &&
+        //     frm.doc.action_type === 'Refund a Student' &&
+        //     frm.doc.docstatus === 0 &&
+        //     frm.doc.workflow_state === 'Draft') {
+        //     frm.set_value('workflow_state', 'Graduation Refund Draft');
+        // }
     },
 
     funder: function (frm) {
@@ -561,6 +608,45 @@ frappe.ui.form.on('Student Refund', {
         });
     },
 
+    graduation_student: function (frm) {
+        if (!frm.doc.graduation_student) {
+            frm.set_value('graduation_reg_no', '');
+            frm.set_value('graduation_student_name', '');
+            frm.set_value('graduation_ledger_balance', 0);
+            frm.set_value('graduation_amount_to_refund', 0);
+            return;
+        }
+
+        // Auto-populate Reg No (same as customer id) and Name
+        frm.set_value('graduation_reg_no', frm.doc.graduation_student);
+
+        frappe.db.get_value('Customer', frm.doc.graduation_student, 'customer_name', function (r) {
+            if (r) frm.set_value('graduation_student_name', r.customer_name);
+        });
+
+        // Fetch ledger balance
+        frappe.call({
+            method: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_graduation_student_balance',
+            args: { customer: frm.doc.graduation_student },
+            callback: function (r) {
+                if (r.message !== undefined) {
+                    let balance = r.message;
+                    frm.set_value('graduation_ledger_balance', balance);
+
+                    if (balance >= 0) {
+                        frappe.msgprint({
+                            title: 'Cannot Refund',
+                            indicator: 'red',
+                            message: `This student does not have a credit balance in the ledger (Balance: ₦${balance.toLocaleString()}). Only students the school owes money can be refunded.`
+                        });
+                        frm.set_value('graduation_student', '');
+                        frm.set_value('graduation_ledger_balance', 0);
+                    }
+                }
+            }
+        });
+    },
+
     sponsorship_allocation: function (frm) {
         if (!frm.doc.sponsorship_allocation) {
             frm.set_value('batch_number', '');
@@ -766,6 +852,17 @@ frappe.ui.form.on('Student Refund', {
         // frm.toggle_display('section_cheque_cancellation', is_funder && is_cancellation);
         frm.toggle_display('section_cheque_cancellation', is_funder && is_cancellation && !!frm.doc.funder);
         frm.toggle_display('section_cancellation_allocations', is_funder && is_cancellation && !!frm.doc.cheque_donation);
+
+
+        let is_graduation_refund = frm.doc.request_type === 'Graduation' && frm.doc.action_type === 'Refund a Student';
+        frm.toggle_display('section_graduation_refund', is_graduation_refund);
+        frm.toggle_display('graduation_student', is_graduation_refund);
+        frm.toggle_display('graduation_reg_no', is_graduation_refund);
+        frm.toggle_display('graduation_student_name', is_graduation_refund);
+        frm.toggle_display('graduation_ledger_balance', is_graduation_refund);
+        frm.toggle_display('graduation_amount_to_refund', is_graduation_refund);
+        frm.toggle_display('graduation_bank_account', is_graduation_refund);
+        frm.toggle_display('col_break_graduation', is_graduation_refund);
     }
 
 });

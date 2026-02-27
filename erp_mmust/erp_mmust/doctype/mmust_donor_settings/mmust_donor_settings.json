@@ -57,6 +57,13 @@
             "options": "Print Format"
         },
         {
+            "fieldname": "graduation_refund_print_format",
+            "label": "Graduation Refund Print Format",
+            "fieldtype": "Link",
+            "options": "Print Format",
+            "description": "Print format used for Graduation Student Refund receipts"
+        },
+        {
             "fieldname": "sponsorship_signatories_section",
             "label": "Sponsorship Signatories",
             "fieldtype": "Section Break"

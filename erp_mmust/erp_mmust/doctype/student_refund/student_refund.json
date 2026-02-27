@@ -28,7 +28,7 @@
             "fieldname": "action_type",
             "label": "Action Type",
             "fieldtype": "Select",
-            "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation\nHostel Refund",
+            "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation\nHostel Refund\nRefund a Student",
             "reqd": 1,
             "in_list_view": 1,
             "in_standard_filter": 1
@@ -65,6 +65,59 @@
             "in_list_view": 1,
             "in_standard_filter": 1,
             "search_index": 1
+        },
+        {
+            "fieldname": "section_graduation_refund",
+            "label": "Graduation Refund Details",
+            "fieldtype": "Section Break",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_student",
+            "label": "Student",
+            "fieldtype": "Link",
+            "options": "Customer",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_reg_no",
+            "label": "Reg No",
+            "fieldtype": "Data",
+            "fetch_from": "graduation_student.name",
+            "read_only": 1,
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_student_name",
+            "label": "Student Name",
+            "fieldtype": "Data",
+            "fetch_from": "graduation_student.customer_name",
+            "read_only": 1,
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_ledger_balance",
+            "label": "Amount in Ledger",
+            "fieldtype": "Currency",
+            "read_only": 1,
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "col_break_graduation",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "graduation_amount_to_refund",
+            "label": "Amount to Refund",
+            "fieldtype": "Currency",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_bank_account",
+            "label": "Bank to Refund",
+            "fieldtype": "Link",
+            "options": "Account",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
         },
         {
             "fieldname": "section_funder",
@@ -410,6 +463,14 @@
             "description": "Remark by Payable Accountant"
         },
         {
+            "fieldname": "senior_accountant_narration",
+            "label": "Senior Accountant Remark",
+            "fieldtype": "Small Text",
+            "allow_on_submit": 1,
+            "read_only": 1,
+            "description": "Remark by Senior Accountant Students Finance"
+        },
+        {
             "fieldname": "section_narrations_3",
             "fieldtype": "Section Break"
         },
@@ -426,12 +487,12 @@
             "fieldtype": "Column Break"
         },
         {
-            "fieldname": "accounts_manager_narration",
-            "label": "Accounts Manager Narration",
+            "fieldname": "registrar_narration",
+            "label": "Registrar Remark",
             "fieldtype": "Small Text",
             "allow_on_submit": 1,
             "read_only": 1,
-            "description": "Narration by Accounts Manager"
+            "description": "Remark by Registrar"
         },
         {
             "fieldname": "section_remarks_trail",
@@ -565,6 +626,19 @@
         },
         {
             "role": "Payable Accountant",
+            "read": 1,
+            "write": 1,
+            "submit": 1
+        },
+        {
+            "role": "Registrar",
+            "read": 1,
+            "write": 1,
+            "create": 1,
+            "submit": 1
+        },
+        {
+            "role": "Senior Accountant Students Finance",
             "read": 1,
             "write": 1,
             "submit": 1

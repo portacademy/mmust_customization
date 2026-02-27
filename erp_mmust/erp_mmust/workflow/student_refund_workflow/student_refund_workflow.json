@@ -5,7 +5,7 @@
     "document_type": "Student Refund",
     "idx": 0,
     "is_active": 1,
-    "modified": "2026-02-24 22:14:46.756045",
+    "modified": "2026-02-27 12:00:00.000000",
     "modified_by": "t.ajani@rhocom.ng",
     "name": "Student Refund Workflow",
     "override_status": 0,
@@ -19,6 +19,62 @@
             "is_optional_state": 0,
             "send_email": 1,
             "state": "Draft"
+        },
+        {
+            "allow_edit": "Registrar",
+            "avoid_status_override": 0,
+            "doc_status": "0",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Graduation Refund Draft"
+        },
+        {
+            "allow_edit": "Registrar",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Graduation Refund Revision"
+        },
+        {
+            "allow_edit": "DVC Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending DVC A&F Review"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO Routing"
+        },
+        {
+            "allow_edit": "Senior Accountant Students Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending Senior Accountant"
+        },
+        {
+            "allow_edit": "Finance Officer",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending FO Final Approval"
+        },
+        {
+            "allow_edit": "DVC Finance",
+            "avoid_status_override": 0,
+            "doc_status": "1",
+            "is_optional_state": 0,
+            "send_email": 1,
+            "state": "Pending DVC Authorization"
         },
         {
             "allow_edit": "DVC Finance",
@@ -159,10 +215,118 @@
     ],
     "transitions": [
         {
+            "action": "Submit to DVC A&F",
+            "allow_self_approval": 1,
+            "allowed": "Registrar",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending DVC A&F Review",
+            "send_email_to_creator": 0,
+            "state": "Graduation Refund Draft"
+        },
+        {
+            "action": "Resubmit to DVC A&F",
+            "allow_self_approval": 1,
+            "allowed": "Registrar",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending DVC A&F Review",
+            "send_email_to_creator": 0,
+            "state": "Graduation Refund Revision"
+        },
+        {
+            "action": "Forward to Finance Officer",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending FO Routing",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC A&F Review"
+        },
+        {
+            "action": "Reject - Return To Registrar",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Graduation Refund Revision",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC A&F Review"
+        },
+        {
+            "action": "Route to Senior Accountant",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending Senior Accountant",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Routing"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending DVC A&F Review",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Routing"
+        },
+        {
+            "action": "Forward Processed Voucher to FO",
+            "allow_self_approval": 1,
+            "allowed": "Senior Accountant Students Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending FO Final Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending Senior Accountant"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Senior Accountant Students Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending FO Routing",
+            "send_email_to_creator": 0,
+            "state": "Pending Senior Accountant"
+        },
+        {
+            "action": "Approve & Forward to DVC",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending DVC Authorization",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Final Approval"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "Finance Officer",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending Senior Accountant",
+            "send_email_to_creator": 0,
+            "state": "Pending FO Final Approval"
+        },
+        {
+            "action": "Authorize & Close",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Closed",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC Authorization"
+        },
+        {
+            "action": "Reject - Return To Previous",
+            "allow_self_approval": 1,
+            "allowed": "DVC Finance",
+            "condition": "doc.request_type == \"Graduation\" and doc.action_type == \"Refund a Student\"",
+            "next_state": "Pending FO Final Approval",
+            "send_email_to_creator": 0,
+            "state": "Pending DVC Authorization"
+        },
+        {
             "action": "Submit for SFA Verification",
             "allow_self_approval": 1,
             "allowed": "Finance Officer",
-            "condition": "doc.request_type != \"Hostel\"",
+            "condition": "doc.request_type != \"Hostel\" and doc.request_type != \"Graduation\"",
             "next_state": "Pending SFA Verification",
             "send_email_to_creator": 0,
             "state": "Draft"
@@ -276,7 +440,7 @@
             "action": "Resubmit",
             "allow_self_approval": 1,
             "allowed": "Finance Officer",
-            "condition": "doc.request_type != \"Hostel\"",
+            "condition": "doc.request_type != \"Hostel\" and doc.request_type != \"Graduation\"",
             "next_state": "Pending SFA Verification",
             "send_email_to_creator": 0,
             "state": "Revision Required"

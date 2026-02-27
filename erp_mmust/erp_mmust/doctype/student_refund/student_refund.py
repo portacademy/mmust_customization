@@ -11,6 +11,11 @@ class StudentRefund(Document):
     def before_submit(self):
         self.capture_remark_trail()
 
+    def after_insert(self):
+        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
+            frappe.db.set_value('Student Refund', self.name, 'workflow_state', 'Graduation Refund Draft')
+            frappe.db.commit()
+
     def validate(self):
         self.calculate_total()
         if self.docstatus == 1:
@@ -25,15 +30,19 @@ class StudentRefund(Document):
             self.calculate_reallocation_total()
         elif self.request_type == "Hostel":
             self.validate_hostel_items()
+        elif self.action_type == 'Refund a Student' and self.request_type == 'Graduation':
+            self.validate_graduation_refund()
     
     def capture_remark_trail(self):
         remark_fields = [
+            ("registrar_narration", "Registrar"),
+            ("senior_accountant_narration", "Senior Accountant Students Finance"),
             ("accountant_narration", "Student Finance Accountant"),
             ("finance_officer_narration", "Finance Officer"),
             ("internal_auditor_narration", "Internal Auditor"),
             ("payable_accountant_narration", "Payable Accountant"),
             ("dvc_narration", "DVC Finance"),
-            ("accounts_manager_narration", "Accounts Manager"),
+            # ("accounts_manager_narration", "Accounts Manager"),
         ]
 
         # Load the saved (old) version from DB to compare
@@ -109,6 +118,14 @@ class StudentRefund(Document):
                     "Payment Bank Account is required for Refund to Funder.",
                     title="Missing Field"
                 )
+        
+        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
+            if not self.graduation_student:
+                frappe.throw("Student is required for Graduation Refund.", title="Missing Field")
+            if not self.graduation_amount_to_refund or flt(self.graduation_amount_to_refund) <= 0:
+                frappe.throw("Amount to Refund must be greater than zero.", title="Missing Field")
+            if not self.graduation_bank_account:
+                frappe.throw("Bank to Refund is required for Graduation Refund.", title="Missing Field")
 
     # ─── REFUND TO FUNDER VALIDATIONS ────────────────────────────────────────
 
@@ -336,6 +353,49 @@ class StudentRefund(Document):
                     f"Amount Due for Refund (<b>{refundable:,.2f}</b>) cannot exceed "
                     f"Invoice Amount (<b>{original:,.2f}</b>)."
                 )
+
+    def validate_graduation_refund(self):
+        if not self.graduation_student:
+            return
+
+        # 1. Check ledger balance is negative (school owes student)
+        gl_balance = self._get_student_gl_balance(self.graduation_student)
+        if gl_balance >= 0:
+            frappe.throw(
+                f"<b>{self.graduation_student_name or self.graduation_student}</b> does not have a credit balance "
+                f"in the ledger (Balance: <b>₦{gl_balance:,.2f}</b>). "
+                f"Only students the school owes money can be refunded."
+            )
+
+        credit_balance = abs(gl_balance)
+
+        # 2. Check no unpaid invoices
+        unpaid_invoices = frappe.db.sql("""
+            SELECT name, grand_total, outstanding_amount
+            FROM `tabSales Invoice`
+            WHERE customer = %s
+            AND docstatus = 1
+            AND outstanding_amount > 0
+            AND is_return = 0
+        """, (self.graduation_student,), as_dict=True)
+
+        if unpaid_invoices:
+            inv_list = ", ".join([i.name for i in unpaid_invoices])
+            frappe.throw(
+                f"<b>{self.graduation_student_name or self.graduation_student}</b> has unpaid invoices: "
+                f"<b>{inv_list}</b>. All invoices must be settled before a graduation refund can be processed."
+            )
+
+        # 3. Amount to refund cannot exceed ledger credit balance
+        amount_to_refund = flt(self.graduation_amount_to_refund)
+        if amount_to_refund > credit_balance:
+            frappe.throw(
+                f"Amount to Refund (<b>₦{amount_to_refund:,.2f}</b>) cannot exceed the student's "
+                f"credit balance in the ledger (<b>₦{credit_balance:,.2f}</b>)."
+            )
+
+        # Set total_amount for display
+        self.total_amount = amount_to_refund
 
 
 
@@ -575,3 +635,21 @@ def get_cancellation_data(donation, funder):
         "allocations": allocations,
         "beneficiaries": beneficiaries_raw
     }
+
+
+
+@frappe.whitelist()
+def get_graduation_student_balance(customer):
+    """
+    Returns the net GL balance for a student.
+    Negative = credit balance (school owes student) — eligible for refund.
+    Positive = debit balance (student owes school) — not eligible.
+    """
+    result = frappe.db.sql("""
+        SELECT COALESCE(SUM(debit - credit), 0)
+        FROM `tabGL Entry`
+        WHERE party_type = 'Customer'
+        AND party = %s
+        AND is_cancelled = 0
+    """, (customer,))
+    return flt(result[0][0]) if result else 0.0

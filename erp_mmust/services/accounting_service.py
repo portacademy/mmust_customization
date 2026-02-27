@@ -26,6 +26,8 @@ def process_accounting(doc, method=None):
             post_full_receipt_cancellation(doc)
         elif state == "Hostel Closed" and doc.request_type == "Hostel":
             post_hostel_credit_note(doc)
+        elif state == "Closed" and doc.action_type == "Refund a Student" and doc.request_type == "Graduation":
+            post_graduation_student_refund(doc)
     except Exception as e:
         frappe.log_error(
             title=f"process_accounting ERROR — {state}",
@@ -1394,6 +1396,72 @@ def post_hostel_credit_note(doc):
         indicator="green"
     )
 
+
+def post_graduation_student_refund(doc):
+    if frappe.db.get_value("Student Refund", doc.name, "disbursement_journal_entry"):
+        return
+
+    currency        = get_currency()
+    company         = get_company()
+    amount          = flt(doc.graduation_amount_to_refund)
+    bank_account    = doc.graduation_bank_account
+    student         = doc.graduation_student
+    student_name    = doc.graduation_student_name or student
+    receivable_account = get_receivable_account(company)
+
+    if amount <= 0:
+        frappe.throw("Amount to Refund is zero — cannot post graduation refund.")
+
+    if not bank_account:
+        frappe.throw("No bank account found. Please select a Bank to Refund on the document.")
+
+    je = frappe.new_doc("Journal Entry")
+    je.voucher_type = "Bank Entry"
+    je.company      = company
+    je.posting_date = nowdate()
+    je.cheque_no    = doc.name
+    je.cheque_date  = nowdate()
+    je.user_remark  = (
+        f"Graduation Student Refund | {doc.name} | "
+        f"Student: {student_name} ({student})"
+    )
+
+    # Dr Student Debtors / Receivable (clear student credit)
+    je.append("accounts", {
+        "account":                    receivable_account,
+        "party_type":                 "Customer",
+        "party":                      student,
+        "debit_in_account_currency":  amount,
+        "credit_in_account_currency": 0,
+        "user_remark": f"Graduation refund to {student_name}"
+    })
+
+    # Cr Bank (money leaves bank to student)
+    je.append("accounts", {
+        "account":                    bank_account,
+        "debit_in_account_currency":  0,
+        "credit_in_account_currency": amount,
+        "user_remark": f"Graduation refund payment to {student_name}"
+    })
+
+    je.insert(ignore_permissions=True)
+    je.submit()
+
+    frappe.db.set_value("Student Refund", doc.name, "disbursement_journal_entry", je.name)
+    frappe.db.set_value("Student Refund", doc.name, "debit_account",  receivable_account)
+    frappe.db.set_value("Student Refund", doc.name, "credit_account", bank_account)
+
+    frappe.msgprint(
+        f"✅ Graduation Refund posted.<br>"
+        f"Journal Entry: <b>{je.name}</b><br>"
+        f"Dr {receivable_account} ({student_name})<br>"
+        f"Cr {bank_account}<br>"
+        f"Amount: <b>{currency} {amount:,.2f}</b>",
+        title="Graduation Refund Posted",
+        indicator="green"
+    )
+
+    
 
 
 # ─────────────────────────────────────────────────────────────────────────────
