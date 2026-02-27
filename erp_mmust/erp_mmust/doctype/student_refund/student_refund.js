@@ -189,6 +189,70 @@ frappe.ui.form.on('Student Refund', {
     //     frm.refresh_fields(Object.values(role_field_map));
     // },
 
+    // lock_narration_fields: function (frm) {
+    //     const role_field_map = {
+    //         'Registrar': 'registrar_narration',
+    //         'Senior Accountant Students Finance': 'senior_accountant_narration',
+    //         'Student Finance Accountant': 'accountant_narration',
+    //         'Finance Officer': 'finance_officer_narration',
+    //         'Internal Auditor': 'internal_auditor_narration',
+    //         'Payable Accountant': 'payable_accountant_narration',
+    //         'DVC Finance': 'dvc_narration',
+    //         // 'Accounts Manager': 'accounts_manager_narration'
+    //     };
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_submitted = frm.doc.docstatus === 1;
+
+    //     // Lock ALL narration fields first — always
+    //     Object.values(role_field_map).forEach(function (fieldname) {
+    //         frm.set_df_property(fieldname, 'read_only', 1);
+    //     });
+
+    //     // Accounts Manager can edit all regardless of docstatus
+    //     if (user_roles.includes('Accounts Manager')) {
+    //         Object.values(role_field_map).forEach(function (fieldname) {
+    //             frm.set_df_property(fieldname, 'read_only', 0);
+    //         });
+
+    //     } else if (!is_submitted) {
+    //         // On draft — only Finance Officer can write their narration
+    //         // if (user_roles.includes('Finance Officer')) {
+    //         //     frm.set_df_property('finance_officer_narration', 'read_only', 0);
+    //         // }
+    //         // if (user_roles.includes('Registrar')) {
+    //         //     frm.set_df_property('registrar_narration', 'read_only', 0);
+    //         // }
+
+    //         const is_graduation_refund = frm.doc.request_type === 'Graduation' &&
+    //             frm.doc.action_type === 'Refund a Student';
+
+    //         if (is_graduation_refund) {
+    //             // Graduation Refund Draft — only Registrar can write
+    //             if (user_roles.includes('Registrar')) {
+    //                 frm.set_df_property('registrar_narration', 'read_only', 0);
+    //                 frm.set_df_property('section_narrations', 'collapsible', 0);
+    //                 frm.refresh_field('section_narrations');
+    //             }
+    //         } else {
+    //             // All other drafts — only Finance Officer can write
+    //             if (user_roles.includes('Finance Officer')) {
+    //                 frm.set_df_property('finance_officer_narration', 'read_only', 0);
+    //             }
+    //         }
+
+    //     } else {
+    //         // On submitted — unlock only the field matching the user's role
+    //         Object.entries(role_field_map).forEach(function ([role, fieldname]) {
+    //             if (user_roles.includes(role)) {
+    //                 frm.set_df_property(fieldname, 'read_only', 0);
+    //             }
+    //         });
+    //     }
+
+    //     frm.refresh_fields(Object.values(role_field_map));
+    // },
+
     lock_narration_fields: function (frm) {
         const role_field_map = {
             'Registrar': 'registrar_narration',
@@ -198,16 +262,29 @@ frappe.ui.form.on('Student Refund', {
             'Internal Auditor': 'internal_auditor_narration',
             'Payable Accountant': 'payable_accountant_narration',
             'DVC Finance': 'dvc_narration',
-            // 'Accounts Manager': 'accounts_manager_narration'
         };
 
         const user_roles = frappe.user_roles || [];
         const is_submitted = frm.doc.docstatus === 1;
+        const workflow_state = frm.doc.workflow_state;
 
         // Lock ALL narration fields first — always
         Object.values(role_field_map).forEach(function (fieldname) {
             frm.set_df_property(fieldname, 'read_only', 1);
         });
+
+        const terminal_states = ['Closed', 'Receipt Cancelled', 'Hostel Closed'];
+        const is_closed = terminal_states.includes(workflow_state);
+
+        // Hide ALL individual narration fields when Closed — only trail remains
+        if (is_closed) {
+            Object.values(role_field_map).forEach(function (fieldname) {
+                frm.toggle_display(fieldname, false);
+            });
+            frm.toggle_display('section_narrations', false);
+            frm.refresh_fields(Object.values(role_field_map));
+            return; // exit early
+        }
 
         // Accounts Manager can edit all regardless of docstatus
         if (user_roles.includes('Accounts Manager')) {
@@ -216,26 +293,16 @@ frappe.ui.form.on('Student Refund', {
             });
 
         } else if (!is_submitted) {
-            // On draft — only Finance Officer can write their narration
-            // if (user_roles.includes('Finance Officer')) {
-            //     frm.set_df_property('finance_officer_narration', 'read_only', 0);
-            // }
-            // if (user_roles.includes('Registrar')) {
-            //     frm.set_df_property('registrar_narration', 'read_only', 0);
-            // }
-
             const is_graduation_refund = frm.doc.request_type === 'Graduation' &&
                 frm.doc.action_type === 'Refund a Student';
 
             if (is_graduation_refund) {
-                // Graduation Refund Draft — only Registrar can write
                 if (user_roles.includes('Registrar')) {
                     frm.set_df_property('registrar_narration', 'read_only', 0);
                     frm.set_df_property('section_narrations', 'collapsible', 0);
                     frm.refresh_field('section_narrations');
                 }
             } else {
-                // All other drafts — only Finance Officer can write
                 if (user_roles.includes('Finance Officer')) {
                     frm.set_df_property('finance_officer_narration', 'read_only', 0);
                 }
@@ -253,11 +320,55 @@ frappe.ui.form.on('Student Refund', {
         frm.refresh_fields(Object.values(role_field_map));
     },
 
+
+
+    // lock_graduation_fields: function (frm) {
+    //     const user_roles = frappe.user_roles || [];
+    //     const workflow_state = frm.doc.workflow_state;
+    //     const is_graduation = frm.doc.request_type === 'Graduation' &&
+    //         frm.doc.action_type === 'Refund a Student';
+
+    //     if (!is_graduation) return;
+
+    //     // Lock both fields by default
+    //     frm.set_df_property('graduation_amount_to_refund', 'read_only', 1);
+    //     frm.set_df_property('graduation_bank_account', 'read_only', 1);
+
+    //     // Lock permanently when Closed — nobody can edit, even Accounts Manager
+    //     if (is_closed) {
+    //         frm.set_df_property('graduation_amount_to_refund', 'read_only', 1);
+    //         frm.set_df_property('graduation_bank_account', 'read_only', 1);
+    //         frm.refresh_field('graduation_amount_to_refund');
+    //         frm.refresh_field('graduation_bank_account');
+    //         return; // exit early — no further unlocking
+    //     }
+
+    //     // Only Senior Accountant can edit, and only at their stage
+    //     if (
+    //         user_roles.includes('Senior Accountant Students Finance') &&
+    //         workflow_state === 'Pending Senior Accountant'
+    //     ) {
+    //         frm.set_df_property('graduation_amount_to_refund', 'read_only', 0);
+    //         frm.set_df_property('graduation_bank_account', 'read_only', 0);
+    //     }
+
+    //     // Accounts Manager can edit except when Closed (handled above)
+    //     if (user_roles.includes('Accounts Manager')) {
+    //         frm.set_df_property('graduation_amount_to_refund', 'read_only', 0);
+    //         frm.set_df_property('graduation_bank_account', 'read_only', 0);
+    //     }
+
+    //     frm.refresh_field('graduation_amount_to_refund');
+    //     frm.refresh_field('graduation_bank_account');
+    // },
+
     lock_graduation_fields: function (frm) {
         const user_roles = frappe.user_roles || [];
         const workflow_state = frm.doc.workflow_state;
         const is_graduation = frm.doc.request_type === 'Graduation' &&
             frm.doc.action_type === 'Refund a Student';
+        const terminal_states = ['Closed', 'Receipt Cancelled', 'Hostel Closed'];
+        const is_closed = terminal_states.includes(workflow_state);
 
         if (!is_graduation) return;
 
@@ -265,7 +376,12 @@ frappe.ui.form.on('Student Refund', {
         frm.set_df_property('graduation_amount_to_refund', 'read_only', 1);
         frm.set_df_property('graduation_bank_account', 'read_only', 1);
 
-        // Only Senior Accountant can edit, and only at their stage
+        if (is_closed) {
+            frm.refresh_field('graduation_amount_to_refund');
+            frm.refresh_field('graduation_bank_account');
+            return;
+        }
+
         if (
             user_roles.includes('Senior Accountant Students Finance') &&
             workflow_state === 'Pending Senior Accountant'
@@ -274,7 +390,6 @@ frappe.ui.form.on('Student Refund', {
             frm.set_df_property('graduation_bank_account', 'read_only', 0);
         }
 
-        // Accounts Manager can always edit
         if (user_roles.includes('Accounts Manager')) {
             frm.set_df_property('graduation_amount_to_refund', 'read_only', 0);
             frm.set_df_property('graduation_bank_account', 'read_only', 0);
@@ -912,6 +1027,18 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('graduation_amount_to_refund', is_graduation_refund);
         frm.toggle_display('graduation_bank_account', is_graduation_refund);
         frm.toggle_display('col_break_graduation', is_graduation_refund);
+
+        frm.toggle_display('graduation_phone', is_graduation_refund);
+        frm.toggle_display('graduation_email', is_graduation_refund);
+        frm.toggle_display('graduation_id_number', is_graduation_refund);
+        frm.toggle_display('graduation_year_of_study', is_graduation_refund);
+        frm.toggle_display('graduation_programme', is_graduation_refund);
+        frm.toggle_display('graduation_school', is_graduation_refund);
+        frm.toggle_display('section_graduation_bank_details', is_graduation_refund);
+        frm.toggle_display('graduation_mode_of_refund', is_graduation_refund);
+        frm.toggle_display('graduate_bank_name', is_graduation_refund);
+        frm.toggle_display('graduate_account_number', is_graduation_refund);
+        frm.toggle_display('graduation_swift_code', is_graduation_refund);
     }
 
 });
