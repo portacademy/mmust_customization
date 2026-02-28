@@ -128,12 +128,18 @@
             "fieldname": "graduation_programme",
             "label": "Refund for Programme",
             "fieldtype": "Select",
-            "options": "\nDoctoral\nPost Graduate Studies\nDegree\nDiploma\nCertificate",
+            "options": "\nCertificate Program\nDiploma\nRegular (On Campus)\nAll Programs",
             "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
         },
         {
             "fieldname": "graduation_school",
             "label": "School",
+            "fieldtype": "Data",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "graduation_department",
+            "label": "Department",
             "fieldtype": "Data",
             "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
         },
@@ -179,18 +185,29 @@
             "fieldname": "graduate_bank_name",
             "label": "Bank Name",
             "fieldtype": "Data",
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'"
         },
         {
             "fieldname": "graduate_account_number",
             "label": "Account Number",
             "fieldtype": "Data",
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'"
         },
         {
             "fieldname": "graduation_swift_code",
             "label": "Bank Swift Code",
             "fieldtype": "Data",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'"
+        },
+        {
+            "fieldname": "graduation_column_break_2",
+            "fieldtype": "Column Break",
+            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
+        },
+        {
+            "fieldname": "reason_for_graduation_refund",
+            "label": "Reason for Refund",
+            "fieldtype": "Small Text",
             "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'"
         },
         {

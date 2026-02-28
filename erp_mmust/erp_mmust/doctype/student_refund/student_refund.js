@@ -876,7 +876,7 @@ frappe.ui.form.on('Student Refund', {
                         frappe.msgprint({
                             title: 'Cannot Refund',
                             indicator: 'red',
-                            message: `This student does not have a credit balance in the ledger (Balance: ₦${balance.toLocaleString()}). Only students the school owes money can be refunded.`
+                            message: `This student does not have a credit balance in the ledger (Balance: ${balance.toLocaleString()}). Only students the school owes money can be refunded.`
                         });
                         frm.set_value('graduation_student', '');
                         frm.set_value('graduation_ledger_balance', 0);
@@ -1109,6 +1109,7 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('graduation_year_of_study', is_graduation_refund);
         frm.toggle_display('graduation_programme', is_graduation_refund);
         frm.toggle_display('graduation_school', is_graduation_refund);
+        frm.toggle_display('graduation_department', is_graduation_refund);
         frm.toggle_display('section_graduation_bank_details', is_graduation_refund);
         frm.toggle_display('graduation_mode_of_refund', is_graduation_refund);
         frm.toggle_display('graduate_bank_name', is_graduation_refund);
