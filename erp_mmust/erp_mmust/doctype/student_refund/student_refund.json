@@ -324,7 +324,6 @@
             "fieldname": "custom_portal_refund_id",
             "fieldtype": "Data",
             "label": "College Portal Refund ID",
-            "print_hide": 1,
             "read_only": 1
         },
         {
