@@ -687,3 +687,21 @@ def get_graduation_student_balance(customer):
         AND is_cancelled = 0
     """, (customer,))
     return flt(result[0][0]) if result else 0.0
+
+
+
+def trigger_portal_webhook(doc, method):
+    if (doc.workflow_state == "Closed" and 
+        doc.request_type == "Graduation" and 
+        doc.action_type == "Refund a Student" and
+        doc.custom_portal_refund_id):
+        
+        try:
+            from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
+            webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
+            enqueue_webhook(doc, webhook)
+            frappe.log_error(title="Portal Webhook Triggered", message=f"Webhook triggered for {doc.name}")
+        except Exception as e:
+            frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+    else:
+        frappe.log_error(title="Portal Webhook Skipped", message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}")

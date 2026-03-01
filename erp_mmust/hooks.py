@@ -274,13 +274,33 @@ fixtures = [
 ]
 
 
+# doc_events = {
+#     "Student Refund": {
+#         "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting",
+#         "before_update_after_submit": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.before_update_after_submit",
+#         "on_update": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.trigger_portal_webhook",
+#         "on_workflow_action": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.trigger_portal_webhook"
+#     },
+#     "Donation": {
+#     "on_submit": "erp_mmust.services.accounting_service.post_donation_journal_entry"
+#     },
+#     "Donor": {
+#         "on_update": "erp_mmust.services.donor_service.create_donor_gl_account"
+#     }
+# }
+
 doc_events = {
     "Student Refund": {
-        "on_update_after_submit": "erp_mmust.services.accounting_service.process_accounting",
-        "before_update_after_submit": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.before_update_after_submit"
+        "on_update_after_submit": [
+            "erp_mmust.services.accounting_service.process_accounting",
+            "erp_mmust.erp_mmust.doctype.student_refund.student_refund.trigger_portal_webhook"
+        ],
+        "before_update_after_submit": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.before_update_after_submit",
+        "on_update": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.trigger_portal_webhook",
+        "on_workflow_action": "erp_mmust.erp_mmust.doctype.student_refund.student_refund.trigger_portal_webhook"
     },
     "Donation": {
-    "on_submit": "erp_mmust.services.accounting_service.post_donation_journal_entry"
+        "on_submit": "erp_mmust.services.accounting_service.post_donation_journal_entry"
     },
     "Donor": {
         "on_update": "erp_mmust.services.donor_service.create_donor_gl_account"
