@@ -110,6 +110,17 @@ frappe.ui.form.on('Student Refund', {
         //         });
         // }
 
+        const terminal_colors = {
+            'Closed': 'green',
+            'Hostel Closed': 'green',
+            'Receipt Cancelled': 'orange'
+        };
+
+        const state = frm.doc.workflow_state;
+        if (terminal_colors[state]) {
+            frm.page.set_indicator(state, terminal_colors[state]);
+        }
+
 
         frm.trigger('toggle_fields');
         frm.trigger('add_print_cheque_button');

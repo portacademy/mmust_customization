@@ -7,6 +7,7 @@ class StudentRefund(Document):
 
     def before_save(self):
         self.capture_remark_trail()
+        self.clear_narration_fields()
 
 
     def validate_graduation_refund_amount(self):
@@ -432,6 +433,21 @@ class StudentRefund(Document):
         # Set total_amount for display
         self.total_amount = amount_to_refund
 
+    
+    def clear_narration_fields(self):
+        narration_fields = [
+            'registrar_narration',
+            'accountant_narration', 
+            'finance_officer_narration',
+            'internal_auditor_narration',
+            'payable_accountant_narration',
+            'senior_accountant_narration',
+            'dvc_narration'
+        ]
+        for field in narration_fields:
+            if doc.get(field):
+                doc.set(field, '')
+
 
 
 
@@ -549,6 +565,7 @@ def before_update_after_submit(self, method=None):
     self.flags.ignore_mandatory = True
     # self._protect_narration_fields()
     self.capture_remark_trail()
+    self.clear_narration_fields()
 
 
 def append_remark_to_trail(doc, remark_field, role_label):
