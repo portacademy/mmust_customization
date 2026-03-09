@@ -6,7 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, nowdate
 import csv
 from io import StringIO
-
+from frappe.utils import nowdate, flt
 
 class SponsorshipAllocation(Document):
 
@@ -87,7 +87,8 @@ class SponsorshipAllocation(Document):
 		Create Journal Entry:
 		- Debit: Account Debited with Donor as party (Total Allocated)
 		- Credits: Student Debtors account with each Customer as party (Amount per beneficiary)
-		- Automatically reconcile invoices based on invoice_type
+		- Link references directly via reference_type / reference_name / allocated_amount fields
+		on the Journal Entry Account child table row.
 		"""
 
 		if not self.beneficiaries:
@@ -97,7 +98,8 @@ class SponsorshipAllocation(Document):
 
 		if abs(total_beneficiary_amount - self.total_allocated) > 0.01:
 			frappe.throw(
-				f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal total allocated ({self.total_allocated})"
+				f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal "
+				f"total allocated ({self.total_allocated})"
 			)
 
 		student_debtors_account = frappe.db.get_value(
@@ -147,17 +149,19 @@ class SponsorshipAllocation(Document):
 
 			remaining = flt(beneficiary.amount)
 
+			# Create credit row for this student
 			account_row = je.append("accounts", {
 				"account": student_debtors_account,
 				"debit_in_account_currency": 0,
 				"credit_in_account_currency": remaining,
 				"party_type": "Customer",
 				"party": beneficiary.student,
-				"is_advance": "Yes",
+				# is_advance is usually "No" when we are clearing invoices
+				# "is_advance": "Yes",   ← comment out or set "No" — usually not advance here
 				"user_remark": f"Sponsorship allocation to {beneficiary.student_name} - {self.name}"
 			})
 
-			# fetch unpaid invoices
+			# Fetch oldest unpaid relevant invoices
 			invoices = frappe.get_all(
 				"Sales Invoice",
 				filters={
@@ -165,41 +169,55 @@ class SponsorshipAllocation(Document):
 					"docstatus": 1,
 					"is_return": 0,
 					"outstanding_amount": (">", 0),
-					"custom_desc": ["in", invoice_filters]
+					"custom_desc": ["in", invoice_filters]   # ← make sure this field exists!
 				},
 				fields=[
 					"name",
 					"outstanding_amount",
 					"posting_date"
 				],
-				order_by="posting_date asc"
+				order_by="posting_date asc",
+				limit=20   # safety limit — prevent too many rows
 			)
+
+			allocated_total = 0
 
 			for inv in invoices:
-
-				if remaining <= 0:
+				if remaining <= 0.01:
 					break
 
-				allocate = min(inv.outstanding_amount, remaining)
+				allocate = min(flt(inv.outstanding_amount), remaining)
 
-				account_row.append("references", {
-					"reference_doctype": "Sales Invoice",
-					"reference_name": inv.name,
-					"allocated_amount": allocate
-				})
+				# Add reference directly on the account row
+				account_row.reference_type = "Sales Invoice"
+				account_row.reference_name = inv.name
+				account_row.allocated_amount = allocated_total + allocate   # cumulative
 
 				remaining -= allocate
+				allocated_total += allocate
 
-			je.insert()
-			je.submit()
+			# If there's still remaining amount after all invoices → it becomes an advance
+			if remaining > 0.01:
+				# You can decide what to do:
+				# Option A: leave it as advance (no reference)
+				account_row.is_advance = "Yes"
 
-			self.db_set("journal_entry", je.name)
+				# Option B: throw error if you want full allocation only
+				# frappe.throw(f"Could not allocate full {remaining} for student {beneficiary.student}")
 
-			frappe.msgprint(
-				f"Journal Entry {je.name} created successfully",
-				alert=True,
-				indicator="green"
-			)
+		# Optional: validate total debit == total credit
+		je.run_method("validate")
+
+		je.insert()
+		je.submit()
+
+		self.db_set("journal_entry", je.name)
+
+		frappe.msgprint(
+			f"Journal Entry {je.name} created and submitted successfully",
+			alert=True,
+			indicator="green"
+		)
 
 	def cancel_journal_entry(self):
 		"""Cancel the linked journal entry when this document is cancelled"""
