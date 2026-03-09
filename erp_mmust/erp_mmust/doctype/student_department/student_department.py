@@ -1,4 +1,4 @@
 from frappe.model.document import Document
 
-class Department(Document):
+class StudentDepartment(Document):
     pass

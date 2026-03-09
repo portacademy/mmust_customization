@@ -43,12 +43,14 @@ frappe.query_reports["Daily Fee Collection"] = {
         {
             fieldname: "faculty",
             label: __("Faculty"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Faculty"
         },
         {
             fieldname: "department",
             label: __("Department"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Student Department"
         },
         {
             fieldname: "custom_program_of_study",
