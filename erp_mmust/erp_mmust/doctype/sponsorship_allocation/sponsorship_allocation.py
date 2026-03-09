@@ -82,76 +82,119 @@ class SponsorshipAllocation(Document):
 		"""Cancel related journal entry on cancel"""
 		self.cancel_journal_entry()
 	
-	def create_journal_entry(self):
-		"""
-		Create Journal Entry:
-		- Debit: Account Debited with Donor as party (Total Allocated)
-		- Credits: Student Debtors account with each Customer as party (Amount per beneficiary)
-		"""
-		if not self.beneficiaries:
-			frappe.throw("Cannot create journal entry without beneficiaries")
-		
-		# Validate total allocated equals sum of beneficiary amounts
-		total_beneficiary_amount = sum(flt(d.amount) for d in self.beneficiaries)
-		if abs(total_beneficiary_amount - self.total_allocated) > 0.01:
-			frappe.throw(
-				f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal total allocated ({self.total_allocated})"
-			)
-		
-		# Get Student Debtors account
-		student_debtors_account = frappe.db.get_value(
-			"Account",
-			{
-				"account_name": "Student Debtors",
-				"company": self.company
-			},
-			"name"
+def create_journal_entry(self):
+	"""
+	Create Journal Entry:
+	- Debit: Account Debited with Donor as party (Total Allocated)
+	- Credits: Student Debtors account with each Customer as party (Amount per beneficiary)
+	- Automatically reconcile invoices based on invoice_type
+	"""
+
+	if not self.beneficiaries:
+		frappe.throw("Cannot create journal entry without beneficiaries")
+
+	total_beneficiary_amount = sum(flt(d.amount) for d in self.beneficiaries)
+
+	if abs(total_beneficiary_amount - self.total_allocated) > 0.01:
+		frappe.throw(
+			f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal total allocated ({self.total_allocated})"
 		)
-		
-		if not student_debtors_account:
-			frappe.throw("Student Debtors account not found. Please create it first.")
-		
-		# Create Journal Entry
-		je = frappe.new_doc("Journal Entry")
-		je.voucher_type = "Journal Entry"
-		je.posting_date = self.date or nowdate()
-		je.company = self.company
-		je.user_remark = f"Sponsorship allocation for {self.donor_name} - {self.name}"
-		
-		# Debit Entry - Debit the account with Donor as party
-		je.append("accounts", {
-			"account": self.account_debited,
-			"debit_in_account_currency": self.total_allocated,
-			"credit_in_account_currency": 0,
-			"party_type": "Donor",
-			"party": self.donor,
-			"user_remark": f"Sponsorship from {self.donor_name} - {self.name}"
+
+	student_debtors_account = frappe.db.get_value(
+		"Account",
+		{
+			"account_name": "Student Debtors",
+			"company": self.company
+		},
+		"name"
+	)
+
+	if not student_debtors_account:
+		frappe.throw("Student Debtors account not found. Please create it first.")
+
+	# invoice type mapping
+	invoice_map = {
+		"Tuition Fee": ["Tuition Fee", "Tuition Adjustment"],
+		"Scholarship Fee": ["Scholarship Fee", "Scholarship Adjustment"],
+		"Loan Fee": ["Loan Fee", "Loan Adjustment"]
+	}
+
+	invoice_filters = invoice_map.get(self.invoice_type, [self.invoice_type])
+
+	je = frappe.new_doc("Journal Entry")
+	je.voucher_type = "Journal Entry"
+	je.posting_date = self.date or nowdate()
+	je.company = self.company
+	je.user_remark = f"Sponsorship allocation for {self.donor_name} - {self.name}"
+
+	# Debit donor account
+	je.append("accounts", {
+		"account": self.account_debited,
+		"debit_in_account_currency": self.total_allocated,
+		"credit_in_account_currency": 0,
+		"party_type": "Donor",
+		"party": self.donor,
+		"user_remark": f"Sponsorship from {self.donor_name} - {self.name}"
+	})
+
+	for beneficiary in self.beneficiaries:
+
+		if not beneficiary.student:
+			frappe.throw(f"Student is required in row {beneficiary.idx}")
+
+		if flt(beneficiary.amount) <= 0:
+			frappe.throw(f"Amount must be greater than 0 in row {beneficiary.idx}")
+
+		remaining = flt(beneficiary.amount)
+
+		account_row = je.append("accounts", {
+			"account": student_debtors_account,
+			"debit_in_account_currency": 0,
+			"credit_in_account_currency": remaining,
+			"party_type": "Customer",
+			"party": beneficiary.student,
+			"is_advance": "Yes",
+			"user_remark": f"Sponsorship allocation to {beneficiary.student_name} - {self.name}"
 		})
-		
-		# Credit Entries - Credit Student Debtors account with each Customer as party
-		for beneficiary in self.beneficiaries:
-			if not beneficiary.student:
-				frappe.throw(f"Student is required in row {beneficiary.idx}")
-			
-			if flt(beneficiary.amount) <= 0:
-				frappe.throw(f"Amount must be greater than 0 in row {beneficiary.idx}")
-			
-			je.append("accounts", {
-				"account": student_debtors_account,
-				"debit_in_account_currency": 0,
-				"credit_in_account_currency": flt(beneficiary.amount),
-				"party_type": "Customer",
-				"party": beneficiary.student,
-				"user_remark": f"Sponsorship allocation to {beneficiary.student_name} - {self.name}"
+
+		# fetch unpaid invoices
+		invoices = frappe.get_all(
+			"Sales Invoice",
+			filters={
+				"customer": beneficiary.student,
+				"docstatus": 1,
+				"is_return": 0,
+				"outstanding_amount": (">", 0),
+				"custom_desc": ["in", invoice_filters]
+			},
+			fields=[
+				"name",
+				"outstanding_amount",
+				"posting_date"
+			],
+			order_by="posting_date asc"
+		)
+
+		for inv in invoices:
+
+			if remaining <= 0:
+				break
+
+			allocate = min(inv.outstanding_amount, remaining)
+
+			account_row.append("references", {
+				"reference_doctype": "Sales Invoice",
+				"reference_name": inv.name,
+				"allocated_amount": allocate
 			})
-		
-		# Save and submit the journal entry
+
+			remaining -= allocate
+
 		je.insert()
 		je.submit()
-		
-		# Link the journal entry to this document
+
 		self.db_set("journal_entry", je.name)
-		
+
 		frappe.msgprint(
 			f"Journal Entry {je.name} created successfully",
 			alert=True,
