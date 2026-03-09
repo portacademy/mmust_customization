@@ -284,7 +284,7 @@ fixtures = [
 doc_events = {
 
     "Sponsorship Allocation": {
-        "on_submit": "erp_mmust.services.reconcile.auto_reconcile_sponsorship"
+        "before_submit": "erp_mmust.services.reconcile.auto_reconcile_sponsorship"
     },  
     
     "Student Refund": {

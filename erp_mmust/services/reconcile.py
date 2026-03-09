@@ -19,15 +19,26 @@ def auto_reconcile_sponsorship(doc, method):
 
         invoice_filters = invoice_map.get(doc.invoice_type, [doc.invoice_type])
 
-        for row in je.accounts:
+        # cancel JE so references can be added
+        if je.docstatus == 1:
+            je.cancel()
 
-            if row.party_type != "Customer":
+        for beneficiary in doc.beneficiaries:
+
+            student = beneficiary.student
+            remaining = beneficiary.amount
+
+            if not student or remaining <= 0:
                 continue
 
-            student = row.party
-            remaining = row.credit_in_account_currency or 0
+            # find JE account row for this student
+            account_row = None
+            for row in je.accounts:
+                if row.party_type == "Customer" and row.party == student:
+                    account_row = row
+                    break
 
-            if remaining <= 0:
+            if not account_row:
                 continue
 
             invoices = frappe.get_all(
@@ -39,7 +50,11 @@ def auto_reconcile_sponsorship(doc, method):
                     "outstanding_amount": (">", 0),
                     "custom_desc": ["in", invoice_filters]
                 },
-                fields=["name", "outstanding_amount", "posting_date"],
+                fields=[
+                    "name",
+                    "outstanding_amount",
+                    "posting_date"
+                ],
                 order_by="posting_date asc"
             )
 
@@ -50,19 +65,16 @@ def auto_reconcile_sponsorship(doc, method):
 
                 allocate = min(inv.outstanding_amount, remaining)
 
-                reconcile_against_document({
-                    "company": doc.company,
-                    "party_type": "Customer",
-                    "party": student,
-                    "account": row.account,
-                    "voucher_type": "Journal Entry",
-                    "voucher_no": je.name,
-                    "against_voucher_type": "Sales Invoice",
-                    "against_voucher": inv.name,
+                account_row.append("references", {
+                    "reference_doctype": "Sales Invoice",
+                    "reference_name": inv.name,
                     "allocated_amount": allocate
                 })
 
                 remaining -= allocate
+
+        je.save(ignore_permissions=True)
+        je.submit()
 
     except Exception:
         frappe.log_error(
