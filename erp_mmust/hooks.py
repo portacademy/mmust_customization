@@ -137,14 +137,6 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
-
 # Scheduled Tasks
 # ---------------
 
@@ -290,6 +282,11 @@ fixtures = [
 # }
 
 doc_events = {
+
+    "Sponsorship Allocation": {
+        "on_submit": "erp_mmust.services.reconcile.auto_reconcile_sponsorship"
+    },  
+    
     "Student Refund": {
         "on_update_after_submit": [
             "erp_mmust.services.accounting_service.process_accounting",
