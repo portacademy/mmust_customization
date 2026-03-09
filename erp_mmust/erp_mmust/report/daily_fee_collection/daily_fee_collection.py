@@ -127,7 +127,7 @@ def get_data(filters):
             c.custom_faculty,
             c.custom_department,
             c.custom_program_of_study,
-            c.level as custom_level,
+            c.custom_level,
             c.custom_campus,
             c.custom_student_type
         FROM
@@ -166,18 +166,16 @@ def get_conditions(filters):
         conditions.append("AND pe.mode_of_payment = %(mode_of_payment)s")
 
     if filters.get("faculty"):
-        filters["faculty"] = "%" + filters["faculty"] + "%"
-        conditions.append("AND c.custom_faculty LIKE %(faculty)s")
+        conditions.append("AND c.custom_faculty = %(faculty)s")
 
     if filters.get("department"):
-        filters["department"] = "%" + filters["department"] + "%"
-        conditions.append("AND c.custom_department LIKE %(department)s")
+        conditions.append("AND c.custom_department = %(department)s")
 
     if filters.get("custom_program_of_study"):
         conditions.append("AND c.custom_program_of_study = %(custom_program_of_study)s")
 
     if filters.get("custom_level"):
-        conditions.append("AND c.level = %(custom_level)s")
+        conditions.append("AND c.custom_level = %(custom_level)s")
 
     if filters.get("custom_campus"):
         filters["custom_campus"] = "%" + filters["custom_campus"] + "%"

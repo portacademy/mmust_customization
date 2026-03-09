@@ -29,12 +29,25 @@ frappe.query_reports["Student Fee Balance"] = {
         {
             fieldname: "faculty",
             label: __("Faculty"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Faculty",
+            onchange: function () {
+                // Clear department when faculty changes
+                frappe.query_report.set_filter_value("department", "");
+            }
         },
         {
             fieldname: "department",
             label: __("Department"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Department",
+            get_query: function () {
+                const faculty = frappe.query_report.get_filter_value("faculty");
+                if (faculty) {
+                    return { filters: { faculty: faculty } };
+                }
+                return {};
+            }
         },
         {
             fieldname: "custom_program_of_study",
