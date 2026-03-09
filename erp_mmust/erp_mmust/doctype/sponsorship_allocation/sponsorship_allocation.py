@@ -82,124 +82,124 @@ class SponsorshipAllocation(Document):
 		"""Cancel related journal entry on cancel"""
 		self.cancel_journal_entry()
 	
-def create_journal_entry(self):
-	"""
-	Create Journal Entry:
-	- Debit: Account Debited with Donor as party (Total Allocated)
-	- Credits: Student Debtors account with each Customer as party (Amount per beneficiary)
-	- Automatically reconcile invoices based on invoice_type
-	"""
+	def create_journal_entry(self):
+		"""
+		Create Journal Entry:
+		- Debit: Account Debited with Donor as party (Total Allocated)
+		- Credits: Student Debtors account with each Customer as party (Amount per beneficiary)
+		- Automatically reconcile invoices based on invoice_type
+		"""
 
-	if not self.beneficiaries:
-		frappe.throw("Cannot create journal entry without beneficiaries")
+		if not self.beneficiaries:
+			frappe.throw("Cannot create journal entry without beneficiaries")
 
-	total_beneficiary_amount = sum(flt(d.amount) for d in self.beneficiaries)
+		total_beneficiary_amount = sum(flt(d.amount) for d in self.beneficiaries)
 
-	if abs(total_beneficiary_amount - self.total_allocated) > 0.01:
-		frappe.throw(
-			f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal total allocated ({self.total_allocated})"
+		if abs(total_beneficiary_amount - self.total_allocated) > 0.01:
+			frappe.throw(
+				f"Sum of beneficiary amounts ({total_beneficiary_amount}) must equal total allocated ({self.total_allocated})"
+			)
+
+		student_debtors_account = frappe.db.get_value(
+			"Account",
+			{
+				"account_name": "Student Debtors",
+				"company": self.company
+			},
+			"name"
 		)
 
-	student_debtors_account = frappe.db.get_value(
-		"Account",
-		{
-			"account_name": "Student Debtors",
-			"company": self.company
-		},
-		"name"
-	)
+		if not student_debtors_account:
+			frappe.throw("Student Debtors account not found. Please create it first.")
 
-	if not student_debtors_account:
-		frappe.throw("Student Debtors account not found. Please create it first.")
+		# invoice type mapping
+		invoice_map = {
+			"Tuition Fee": ["Tuition Fee", "Tuition Adjustment"],
+			"Scholarship Fee": ["Scholarship Fee", "Scholarship Adjustment"],
+			"Loan Fee": ["Loan Fee", "Loan Adjustment"]
+		}
 
-	# invoice type mapping
-	invoice_map = {
-		"Tuition Fee": ["Tuition Fee", "Tuition Adjustment"],
-		"Scholarship Fee": ["Scholarship Fee", "Scholarship Adjustment"],
-		"Loan Fee": ["Loan Fee", "Loan Adjustment"]
-	}
+		invoice_filters = invoice_map.get(self.invoice_type, [self.invoice_type])
 
-	invoice_filters = invoice_map.get(self.invoice_type, [self.invoice_type])
+		je = frappe.new_doc("Journal Entry")
+		je.voucher_type = "Journal Entry"
+		je.posting_date = self.date or nowdate()
+		je.company = self.company
+		je.user_remark = f"Sponsorship allocation for {self.donor_name} - {self.name}"
 
-	je = frappe.new_doc("Journal Entry")
-	je.voucher_type = "Journal Entry"
-	je.posting_date = self.date or nowdate()
-	je.company = self.company
-	je.user_remark = f"Sponsorship allocation for {self.donor_name} - {self.name}"
-
-	# Debit donor account
-	je.append("accounts", {
-		"account": self.account_debited,
-		"debit_in_account_currency": self.total_allocated,
-		"credit_in_account_currency": 0,
-		"party_type": "Donor",
-		"party": self.donor,
-		"user_remark": f"Sponsorship from {self.donor_name} - {self.name}"
-	})
-
-	for beneficiary in self.beneficiaries:
-
-		if not beneficiary.student:
-			frappe.throw(f"Student is required in row {beneficiary.idx}")
-
-		if flt(beneficiary.amount) <= 0:
-			frappe.throw(f"Amount must be greater than 0 in row {beneficiary.idx}")
-
-		remaining = flt(beneficiary.amount)
-
-		account_row = je.append("accounts", {
-			"account": student_debtors_account,
-			"debit_in_account_currency": 0,
-			"credit_in_account_currency": remaining,
-			"party_type": "Customer",
-			"party": beneficiary.student,
-			"is_advance": "Yes",
-			"user_remark": f"Sponsorship allocation to {beneficiary.student_name} - {self.name}"
+		# Debit donor account
+		je.append("accounts", {
+			"account": self.account_debited,
+			"debit_in_account_currency": self.total_allocated,
+			"credit_in_account_currency": 0,
+			"party_type": "Donor",
+			"party": self.donor,
+			"user_remark": f"Sponsorship from {self.donor_name} - {self.name}"
 		})
 
-		# fetch unpaid invoices
-		invoices = frappe.get_all(
-			"Sales Invoice",
-			filters={
-				"customer": beneficiary.student,
-				"docstatus": 1,
-				"is_return": 0,
-				"outstanding_amount": (">", 0),
-				"custom_desc": ["in", invoice_filters]
-			},
-			fields=[
-				"name",
-				"outstanding_amount",
-				"posting_date"
-			],
-			order_by="posting_date asc"
-		)
+		for beneficiary in self.beneficiaries:
 
-		for inv in invoices:
+			if not beneficiary.student:
+				frappe.throw(f"Student is required in row {beneficiary.idx}")
 
-			if remaining <= 0:
-				break
+			if flt(beneficiary.amount) <= 0:
+				frappe.throw(f"Amount must be greater than 0 in row {beneficiary.idx}")
 
-			allocate = min(inv.outstanding_amount, remaining)
+			remaining = flt(beneficiary.amount)
 
-			account_row.append("references", {
-				"reference_doctype": "Sales Invoice",
-				"reference_name": inv.name,
-				"allocated_amount": allocate
+			account_row = je.append("accounts", {
+				"account": student_debtors_account,
+				"debit_in_account_currency": 0,
+				"credit_in_account_currency": remaining,
+				"party_type": "Customer",
+				"party": beneficiary.student,
+				"is_advance": "Yes",
+				"user_remark": f"Sponsorship allocation to {beneficiary.student_name} - {self.name}"
 			})
 
-			remaining -= allocate
+			# fetch unpaid invoices
+			invoices = frappe.get_all(
+				"Sales Invoice",
+				filters={
+					"customer": beneficiary.student,
+					"docstatus": 1,
+					"is_return": 0,
+					"outstanding_amount": (">", 0),
+					"custom_desc": ["in", invoice_filters]
+				},
+				fields=[
+					"name",
+					"outstanding_amount",
+					"posting_date"
+				],
+				order_by="posting_date asc"
+			)
 
-		je.insert()
-		je.submit()
+			for inv in invoices:
 
-		self.db_set("journal_entry", je.name)
+				if remaining <= 0:
+					break
 
-		frappe.msgprint(
-			f"Journal Entry {je.name} created successfully",
-			alert=True,
-			indicator="green"
-		)
+				allocate = min(inv.outstanding_amount, remaining)
+
+				account_row.append("references", {
+					"reference_doctype": "Sales Invoice",
+					"reference_name": inv.name,
+					"allocated_amount": allocate
+				})
+
+				remaining -= allocate
+
+			je.insert()
+			je.submit()
+
+			self.db_set("journal_entry", je.name)
+
+			frappe.msgprint(
+				f"Journal Entry {je.name} created successfully",
+				alert=True,
+				indicator="green"
+			)
 
 	def cancel_journal_entry(self):
 		"""Cancel the linked journal entry when this document is cancelled"""
