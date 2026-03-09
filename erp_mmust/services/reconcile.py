@@ -50,13 +50,17 @@ def auto_reconcile_sponsorship(doc, method):
 
                 allocate = min(inv.outstanding_amount, remaining)
 
-                reconcile_against_document(
-                    "Sales Invoice",
-                    inv.name,
-                    "Journal Entry",
-                    je.name,
-                    allocate
-                )
+                reconcile_against_document({
+                    "company": doc.company,
+                    "party_type": "Customer",
+                    "party": student,
+                    "account": row.account,
+                    "voucher_type": "Journal Entry",
+                    "voucher_no": je.name,
+                    "against_voucher_type": "Sales Invoice",
+                    "against_voucher": inv.name,
+                    "allocated_amount": allocate
+                })
 
                 remaining -= allocate
 
