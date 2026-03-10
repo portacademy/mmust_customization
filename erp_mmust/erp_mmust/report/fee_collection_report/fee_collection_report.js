@@ -99,5 +99,10 @@ frappe.query_reports["Fee Collection Report"] = {
             });
             report.refresh();
         });
+
+        // Style the Clear Filters button black
+        report.page.inner_toolbar.find("button").filter(function () {
+            return $(this).text().trim() === "Clear Filters";
+        }).css({ "background-color": "#000", "color": "#fff", "border-color": "#000" });
     }
 };
