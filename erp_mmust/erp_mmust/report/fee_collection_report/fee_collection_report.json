@@ -11,10 +11,10 @@
     "modified": "2026-03-03 00:00:00.000000",
     "modified_by": "Administrator",
     "module": "Erp Mmust",
-    "name": "Daily Fee Collection",
+    "name": "Fee Collection Report",
     "owner": "Administrator",
     "ref_doctype": "Payment Entry",
-    "report_name": "Daily Fee Collection",
+    "report_name": "Fee Collection Report",
     "report_type": "Script Report",
     "roles": [
         {

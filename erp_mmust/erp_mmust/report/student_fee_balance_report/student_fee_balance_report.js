@@ -1,4 +1,4 @@
-frappe.query_reports["Student Fee Balance"] = {
+frappe.query_reports["Student Fee Balance Report"] = {
     filters: [
         {
             fieldname: "balance_type",
@@ -47,13 +47,14 @@ frappe.query_reports["Student Fee Balance"] = {
         {
             fieldname: "custom_level",
             label: __("Year of Study"),
-            fieldtype: "Link",
-            options: "Student Level"
+            fieldtype: "Select",
+            options: "\n100\n200\n300\n400\n500"
         },
         {
             fieldname: "custom_campus",
             label: __("Campus"),
-            fieldtype: "Data"
+            fieldtype: "Link",
+            options: "Campus"
         }
     ],
 
@@ -84,6 +85,13 @@ frappe.query_reports["Student Fee Balance"] = {
     onload: function (report) {
         report.page.add_inner_button(__("Export to Excel"), function () {
             report.export_report("Excel");
+        });
+
+        report.page.add_inner_button(__("Clear Filters"), function () {
+            report.filters.forEach(function (filter) {
+                filter.set_value(filter.df.default || "");
+            });
+            report.refresh();
         });
     }
 };

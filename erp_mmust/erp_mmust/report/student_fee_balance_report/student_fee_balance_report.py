@@ -111,11 +111,10 @@ def get_customer_conditions(filters):
         conditions.append("AND c.custom_program_of_study = %(custom_program_of_study)s")
 
     if filters.get("custom_level"):
-        conditions.append("AND c.custom_level = %(custom_level)s")  # Fixed: was c.level
+        conditions.append("AND c.custom_level = %(custom_level)s")
 
     if filters.get("custom_campus"):
-        filters["custom_campus"] = "%" + filters["custom_campus"] + "%"
-        conditions.append("AND c.custom_campus LIKE %(custom_campus)s")
+        conditions.append("AND c.custom_campus = %(custom_campus)s")
 
     if filters.get("custom_student_type"):
         conditions.append("AND c.custom_student_type = %(custom_student_type)s")
