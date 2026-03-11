@@ -38,28 +38,41 @@ def get_data(filters):
     if not parent_account:
         return []
 
-    accounts = frappe.db.get_descendants("Account", parent_account, ignore_permissions=True)
+    accounts = frappe.db.get_descendants("Account", parent_account)
     accounts.append(parent_account)
     
-    conditions = "1=1"
+    conditions = []
+    values = {}
+
     if filters.get("from_date"):
-        conditions += f" AND gle.posting_date >= '{filters['from_date']}'"
+        conditions.append("gle.posting_date >= %(from_date)s")
+        values["from_date"] = filters["from_date"]
     if filters.get("to_date"):
-        conditions += f" AND gle.posting_date <= '{filters['to_date']}'"
+        conditions.append("gle.posting_date <= %(to_date)s")
+        values["to_date"] = filters["to_date"]
     if filters.get("account_name"):
-        conditions += f" AND acc.account_name LIKE '%{filters['account_name']}%'"
+        conditions.append("acc.account_name LIKE %(account_name)s")
+        values["account_name"] = f"%{filters['account_name']}%"
     if filters.get("account_number"):
-        conditions += f" AND acc.name LIKE '%{filters['account_number']}%'"
+        conditions.append("acc.name LIKE %(account_number)s")
+        values["account_number"] = f"%{filters['account_number']}%"
+
+    condition_str = " AND ".join(conditions) if conditions else "1=1"
 
     data = []
     for account_name in accounts:
-        balance = frappe.db.sql(f"""
+        query = f"""
             SELECT
                 SUM(gle.debit) - SUM(gle.credit)
             FROM `tabGL Entry` gle
             JOIN `tabAccount` acc ON gle.account = acc.name
-            WHERE gle.account = '{account_name}' AND {conditions}
-        """, as_list=True)
+            WHERE gle.account = %(account)s AND {condition_str}
+        """
+        
+        balance_values = values.copy()
+        balance_values["account"] = account_name
+        
+        balance = frappe.db.sql(query, balance_values, as_list=True)
         
         balance = balance[0][0] if balance and balance[0][0] is not None else 0
         
