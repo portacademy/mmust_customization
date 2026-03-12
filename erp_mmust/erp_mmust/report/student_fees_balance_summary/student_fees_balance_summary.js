@@ -25,6 +25,30 @@ frappe.query_reports["Student Fees Balance Summary"] = {
             "fieldname": "student_name",
             "label": __("Student Name"),
             "fieldtype": "Data",
+        },
+        {
+            "fieldname": "faculty",
+            "label": __("Faculty/School"),
+            "fieldtype": "Link",
+            "options": "Faculty"
+        },
+        {
+            "fieldname": "custom_program_of_study",
+            "label": __("Programme"),
+            "fieldtype": "Link",
+            "options": "Programme"
+        },
+        {
+            "fieldname": "custom_campus",
+            "label": __("Campus"),
+            "fieldtype": "Link",
+            "options": "Campus"
+        },
+        {
+            "fieldname": "custom_student_type",
+            "label": __("Student Type"),
+            "fieldtype": "Select",
+            "options": "\nPSSP\nGSSP\nPSSP2023\nGSSP2023"
         }
     ]
 };

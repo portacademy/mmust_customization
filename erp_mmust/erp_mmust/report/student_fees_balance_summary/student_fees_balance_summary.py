@@ -44,6 +44,22 @@ def get_data(filters):
     if filters.get("student_name"):
         conditions += " AND c.customer_name LIKE %(student_name)s"
         values["student_name"] = "%" + filters.get("student_name") + "%"
+        
+    if filters.get("faculty"):
+        conditions += " AND c.custom_faculty = %(faculty)s"
+        values["faculty"] = filters.get("faculty")
+
+    if filters.get("custom_program_of_study"):
+        conditions += " AND c.custom_program_of_study = %(custom_program_of_study)s"
+        values["custom_program_of_study"] = filters.get("custom_program_of_study")
+
+    if filters.get("custom_campus"):
+        conditions += " AND c.custom_campus = %(custom_campus)s"
+        values["custom_campus"] = filters.get("custom_campus")
+
+    if filters.get("custom_student_type"):
+        conditions += " AND c.custom_student_type = %(custom_student_type)s"
+        values["custom_student_type"] = filters.get("custom_student_type")
 
     company_receivable_account = frappe.db.get_value("Company", filters.get("company"), "default_receivable_account")
     
