@@ -26,6 +26,20 @@ def get_columns():
             "width": 300
         },
         {
+            "label": _("Faculty/School"),
+            "fieldname": "custom_faculty",
+            "fieldtype": "Link",
+            "options": "Faculty",
+            "width": 200
+        },
+        {
+            "label": _("Programme"),
+            "fieldname": "custom_program_of_study",
+            "fieldtype": "Link",
+            "options": "Programme",
+            "width": 200
+        },
+        {
             "label": _("Balance"),
             "fieldname": "balance",
             "fieldtype": "Currency",
@@ -72,6 +86,8 @@ def get_data(filters):
         SELECT
             c.name AS student_id,
             c.customer_name AS student_name,
+            c.custom_faculty,
+            c.custom_program_of_study,
             (SELECT SUM(debit) - SUM(credit) FROM `tabGL Entry` WHERE party = c.name AND party_type = 'Customer' AND account = %(receivable_account)s) as balance
         FROM
             `tabCustomer` AS c
