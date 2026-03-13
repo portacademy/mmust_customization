@@ -29,8 +29,14 @@ def get_columns():
             "width": 240,
         },
         {
-            "label": _("Total"),
-            "fieldname": "total",
+            "label": _("Invoiced Amount"),
+            "fieldname": "invoiced_amount",
+            "fieldtype": "Currency",
+            "width": 160,
+        },
+        {
+            "label": _("Paid Amount"),
+            "fieldname": "paid_amount",
             "fieldtype": "Currency",
             "width": 160,
         },
@@ -52,7 +58,7 @@ def get_data(filters):
         SELECT
             si.customer AS student_id,
             c.customer_name AS student_name,
-            ROUND(SUM(vote_totals.vote_total), 2) AS total,
+            ROUND(SUM(vote_totals.vote_total), 2) AS invoiced_amount,
             ROUND(
                 SUM(
                     COALESCE(
@@ -62,7 +68,18 @@ def get_data(filters):
                     )
                 ),
                 2
-            ) AS balance
+            ) AS balance,
+            ROUND(
+                SUM(vote_totals.vote_total)
+                - SUM(
+                    COALESCE(
+                        si.outstanding_amount
+                        * (vote_totals.vote_total / NULLIF(invoice_totals.invoice_total, 0)),
+                        0
+                    )
+                ),
+                2
+            ) AS paid_amount
         FROM `tabSales Invoice` si
         INNER JOIN `tabCustomer` c
             ON c.name = si.customer
@@ -94,7 +111,7 @@ def get_data(filters):
             si.customer,
             c.customer_name
         HAVING
-            total != 0 OR balance != 0
+            invoiced_amount != 0 OR balance != 0 OR paid_amount != 0
         ORDER BY
             c.customer_name ASC,
             si.customer ASC
@@ -113,7 +130,12 @@ def get_summary(data):
         },
         {
             "label": _("Grand Total"),
-            "value": sum(flt(row.get("total")) for row in data),
+            "value": sum(flt(row.get("invoiced_amount")) for row in data),
+            "datatype": "Currency",
+        },
+        {
+            "label": _("Grand Paid Amount"),
+            "value": sum(flt(row.get("paid_amount")) for row in data),
             "datatype": "Currency",
         },
         {
