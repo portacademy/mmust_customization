@@ -29,10 +29,17 @@ def get_columns():
             "width": 240,
         },
         {
-            "label": _("Amount Received"),
-            "fieldname": "amount_received",
+            "label": _("Amount"),
+            "fieldname": "amount",
             "fieldtype": "Currency",
             "width": 160,
+        },
+        {
+            "label": _("Vote (Income Account)"),
+            "fieldname": "vote",
+            "fieldtype": "Link",
+            "options": "Account",
+            "width": 220,
         },
         {
             "label": _("Account Paid To"),
@@ -52,17 +59,60 @@ def get_data(filters):
         SELECT
             pe.party AS student_id,
             pe.party_name AS student_name,
-            pe.received_amount AS amount_received,
+            ROUND(
+                SUM(
+                    COALESCE(
+                        per.allocated_amount
+                        * (vote_totals.vote_total / NULLIF(invoice_totals.invoice_total, 0)),
+                        0
+                    )
+                ),
+                2
+            ) AS amount,
+            vote_totals.vote,
             pe.paid_to AS account_paid_to
         FROM `tabPayment Entry` pe
         INNER JOIN `tabCustomer` c ON c.name = pe.party
+        INNER JOIN `tabPayment Entry Reference` per
+            ON per.parent = pe.name
+            AND per.parenttype = 'Payment Entry'
+            AND per.reference_doctype = 'Sales Invoice'
+        INNER JOIN `tabSales Invoice` si
+            ON si.name = per.reference_name
+            AND si.docstatus = 1
+        INNER JOIN (
+            SELECT
+                parent AS invoice_name,
+                income_account AS vote,
+                SUM(net_amount) AS vote_total
+            FROM `tabSales Invoice Item`
+            GROUP BY parent, income_account
+        ) AS vote_totals
+            ON vote_totals.invoice_name = si.name
+        INNER JOIN (
+            SELECT
+                parent AS invoice_name,
+                SUM(net_amount) AS invoice_total
+            FROM `tabSales Invoice Item`
+            GROUP BY parent
+        ) AS invoice_totals
+            ON invoice_totals.invoice_name = si.name
         WHERE
             pe.docstatus = 1
             AND pe.payment_type = 'Receive'
             AND pe.party_type = 'Customer'
             AND c.customer_group = 'Student'
             {conditions}
-        ORDER BY pe.posting_date DESC, pe.creation DESC
+        GROUP BY
+            pe.party,
+            pe.party_name,
+            vote_totals.vote,
+            pe.paid_to
+        HAVING amount != 0
+        ORDER BY
+            pe.party ASC,
+            vote_totals.vote ASC,
+            pe.paid_to ASC
         """.format(conditions=conditions),
         filters,
         as_dict=True,
@@ -82,13 +132,16 @@ def get_conditions(filters):
         conditions.append("AND pe.posting_date <= %(to_date)s")
 
     if filters.get("account"):
-        conditions.append("AND pe.paid_to = %(account)s")
+        conditions.append("AND vote_totals.vote = %(account)s")
+
+    if filters.get("paid_to"):
+        conditions.append("AND pe.paid_to = %(paid_to)s")
 
     return " ".join(conditions)
 
 
 def get_summary(data):
-    total_amount = sum(flt(row.get("amount_received")) for row in data)
+    total_amount = sum(flt(row.get("amount")) for row in data)
 
     return [
         {
@@ -97,7 +150,7 @@ def get_summary(data):
             "datatype": "Currency",
         },
         {
-            "label": _("Total Receipts"),
+            "label": _("Total Rows"),
             "value": len(data),
             "datatype": "Int",
         },

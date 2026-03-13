@@ -24,7 +24,21 @@ frappe.query_reports["Fee Collection Per Vote"] = {
         },
         {
             "fieldname": "account",
-            "label": __("Vote (Account)"),
+            "label": __("Vote (Income Account)"),
+            "fieldtype": "Link",
+            "options": "Account",
+            "reqd": 0,
+            "get_query": function () {
+                return {
+                    "filters": {
+                        "company": frappe.query_report.get_filter_value('company')
+                    }
+                };
+            }
+        },
+        {
+            "fieldname": "paid_to",
+            "label": __("Account Paid To"),
             "fieldtype": "Link",
             "options": "Account",
             "reqd": 0,
