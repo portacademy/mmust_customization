@@ -27,7 +27,7 @@ frappe.query_reports["Fee Collection Per Vote"] = {
             "label": __("Vote (Account)"),
             "fieldtype": "Link",
             "options": "Account",
-            "reqd": 1,
+            "reqd": 0,
             "get_query": function () {
                 return {
                     "filters": {
