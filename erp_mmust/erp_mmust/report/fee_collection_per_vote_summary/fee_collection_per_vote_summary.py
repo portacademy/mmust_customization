@@ -40,18 +40,17 @@ def get_data(filters):
     data = frappe.db.sql("""
         SELECT
             gle.party as student_id,
-            c.customer_name as student_name,
+            (SELECT customer_name FROM `tabCustomer` WHERE name = gle.party) as student_name,
             SUM(gle.credit) - SUM(gle.debit) as amount
         FROM `tabGL Entry` gle
-        LEFT JOIN `tabCustomer` c ON gle.party = c.name
         WHERE
             gle.company = %(company)s
             AND gle.account = %(account)s
             AND gle.posting_date BETWEEN %(from_date)s AND %(to_date)s
             AND gle.party_type = 'Customer'
-            AND c.customer_group = 'Student'
+            AND gle.party IN (SELECT name FROM `tabCustomer` WHERE customer_group = 'Student')
         GROUP BY
-            gle.party, c.customer_name
+            gle.party
         HAVING
             amount != 0
     """, values=filters, as_dict=True)
