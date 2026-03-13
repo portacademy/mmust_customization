@@ -41,13 +41,6 @@ def get_columns():
             "options": "Account",
             "width": 220,
         },
-        {
-            "label": _("Account Paid To"),
-            "fieldname": "account_paid_to",
-            "fieldtype": "Link",
-            "options": "Account",
-            "width": 220,
-        },
     ]
 
 
@@ -69,8 +62,7 @@ def get_data(filters):
                 ),
                 2
             ) AS amount,
-            vote_totals.vote,
-            pe.paid_to AS account_paid_to
+            vote_totals.vote
         FROM `tabPayment Entry` pe
         INNER JOIN `tabCustomer` c ON c.name = pe.party
         INNER JOIN `tabPayment Entry Reference` per
@@ -106,13 +98,11 @@ def get_data(filters):
         GROUP BY
             pe.party,
             pe.party_name,
-            vote_totals.vote,
-            pe.paid_to
+            vote_totals.vote
         HAVING amount != 0
         ORDER BY
             pe.party ASC,
-            vote_totals.vote ASC,
-            pe.paid_to ASC
+            vote_totals.vote ASC
         """.format(conditions=conditions),
         filters,
         as_dict=True,
@@ -131,11 +121,8 @@ def get_conditions(filters):
     if filters.get("to_date"):
         conditions.append("AND pe.posting_date <= %(to_date)s")
 
-    if filters.get("account"):
-        conditions.append("AND vote_totals.vote = %(account)s")
-
-    if filters.get("paid_to"):
-        conditions.append("AND pe.paid_to = %(paid_to)s")
+    if filters.get("vote"):
+        conditions.append("AND vote_totals.vote = %(vote)s")
 
     return " ".join(conditions)
 
