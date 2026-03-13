@@ -13,15 +13,15 @@ def execute(filters=None):
 def get_columns():
     return [
         {
-            "label": _("Account Number"),
-            "fieldname": "account_number",
+            "label": _("Student ID"),
+            "fieldname": "student_id",
             "fieldtype": "Link",
-            "options": "Account",
+            "options": "Customer",
             "width": 200
         },
         {
-            "label": _("Account Name"),
-            "fieldname": "account_name",
+            "label": _("Student Name"),
+            "fieldname": "student_name",
             "fieldtype": "Data",
             "width": 300
         },
@@ -34,47 +34,26 @@ def get_columns():
     ]
 
 def get_data(filters):
-    parent_account = filters.get("parent_account")
-    if not parent_account:
+    if not filters.get("account"):
         return []
 
-    accounts = frappe.db.get_descendants("Account", parent_account)
-    accounts.append(parent_account)
-    
-    conditions = []
-    values = {}
-
-    if filters.get("from_date"):
-        conditions.append("gle.posting_date >= %(from_date)s")
-        values["from_date"] = filters["from_date"]
-    if filters.get("to_date"):
-        conditions.append("gle.posting_date <= %(to_date)s")
-        values["to_date"] = filters["to_date"]
-
-    condition_str = " AND ".join(conditions) if conditions else "1=1"
-
-    data = []
-    for account_name in accounts:
-        query = f"""
-            SELECT
-                SUM(gle.debit) - SUM(gle.credit)
-            FROM `tabGL Entry` gle
-            WHERE gle.account = %(account)s AND {condition_str}
-        """
-        
-        balance_values = values.copy()
-        balance_values["account"] = account_name
-        
-        balance = frappe.db.sql(query, balance_values, as_list=True)
-        
-        balance = balance[0][0] if balance and balance[0][0] is not None else 0
-        
-        if balance != 0:
-            account_info = frappe.db.get_value("Account", account_name, ["name", "account_name"], as_dict=True)
-            data.append({
-                "account_number": account_info.name,
-                "account_name": account_info.account_name,
-                "amount": balance
-            })
+    data = frappe.db.sql("""
+        SELECT
+            gle.party as student_id,
+            c.customer_name as student_name,
+            SUM(gle.credit) - SUM(gle.debit) as amount
+        FROM `tabGL Entry` gle
+        LEFT JOIN `tabCustomer` c ON gle.party = c.name
+        WHERE
+            gle.company = %(company)s
+            AND gle.account = %(account)s
+            AND gle.posting_date BETWEEN %(from_date)s AND %(to_date)s
+            AND gle.party_type = 'Customer'
+            AND c.customer_group = 'Student'
+        GROUP BY
+            gle.party, c.customer_name
+        HAVING
+            amount != 0
+    """, values=filters, as_dict=True)
 
     return data
