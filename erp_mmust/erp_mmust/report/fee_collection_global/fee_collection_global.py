@@ -38,50 +38,54 @@ def get_data(filters):
     if not parent_account:
         return []
 
-    accounts = frappe.db.get_descendants("Account", parent_account)
-    accounts.append(parent_account)
-    
-    conditions = []
-    values = {}
+    # 1. Get all descendant accounts (including parent)
+    descendants = frappe.db.get_descendants("Account", parent_account)
+    descendants.append(parent_account)
 
-    if filters.get("from_date"):
-        conditions.append("gle.posting_date >= %(from_date)s")
-        values["from_date"] = filters["from_date"]
-    if filters.get("to_date"):
-        conditions.append("gle.posting_date <= %(to_date)s")
-        values["to_date"] = filters["to_date"]
+    # 2. Filter these descendants by name/number
+    account_filter_values = {"accounts": tuple(descendants)}
+    account_conditions = ["name IN %(accounts)s"]
     if filters.get("account_name"):
-        conditions.append("acc.account_name LIKE %(account_name)s")
-        values["account_name"] = f"%{filters['account_name']}%"
+        account_conditions.append("account_name LIKE %(account_name)s")
+        account_filter_values["account_name"] = f"%{filters.get('account_name')}%"
     if filters.get("account_number"):
-        conditions.append("acc.name LIKE %(account_number)s")
-        values["account_number"] = f"%{filters['account_number']}%"
+        account_conditions.append("name LIKE %(account_number)s")
+        account_filter_values["account_number"] = f"%{filters.get('account_number')}%"
 
-    condition_str = " AND ".join(conditions) if conditions else "1=1"
+    accounts_to_process = frappe.db.sql(f"""
+        SELECT name, account_name
+        FROM `tabAccount`
+        WHERE {" AND ".join(account_conditions)}
+    """, account_filter_values, as_dict=True)
 
+    # 3. Get balances for these accounts for the date range
     data = []
-    for account_name in accounts:
-        query = f"""
-            SELECT
-                SUM(gle.debit) - SUM(gle.credit)
-            FROM `tabGL Entry` gle
-            JOIN `tabAccount` acc ON gle.account = acc.name
-            WHERE gle.account = %(account)s AND {condition_str}
-        """
+    date_filters = ""
+    date_values = {}
+    if filters.get("from_date"):
+        date_filters += " AND posting_date >= %(from_date)s"
+        date_values["from_date"] = filters.get("from_date")
+    if filters.get("to_date"):
+        date_filters += " AND posting_date <= %(to_date)s"
+        date_values["to_date"] = filters.get("to_date")
+
+    for acc in accounts_to_process:
+        balance_values = {"account": acc.name}
+        balance_values.update(date_values)
         
-        balance_values = values.copy()
-        balance_values["account"] = account_name
-        
-        balance = frappe.db.sql(query, balance_values, as_list=True)
+        balance = frappe.db.sql(f"""
+            SELECT SUM(credit) - SUM(debit)
+            FROM `tabGL Entry`
+            WHERE account = %(account)s {date_filters}
+        """, balance_values, as_list=True)
         
         balance = balance[0][0] if balance and balance[0][0] is not None else 0
         
         if balance != 0:
-            account_info = frappe.db.get_value("Account", account_name, ["name", "account_name"], as_dict=True)
             data.append({
-                "account_number": account_info.name,
-                "account_name": account_info.account_name,
+                "account_number": acc.name,
+                "account_name": acc.account_name,
                 "amount": balance
             })
-
+            
     return data
