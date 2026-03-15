@@ -6,6 +6,13 @@ from erpnext.accounts.doctype.payment_request.payment_request import make_paymen
 
 
 STUDENT_FEES_REDIRECT_URL = "https://mmust.rhocomtech.com/Student/MyFees"
+PAYMENT_REQUEST_EMAIL_TEMPLATE = """
+<p>Dear {{ doc.contact_person }},</p>
+
+<p>Requesting payment for {{ doc.doctype }}, {{ doc.name }} for {{ doc.grand_total }}.</p>
+
+<a href="{{ payment_url }}"> click here to pay </a>
+"""
 
 
 def normalize_invoice_names(invoice_names):
@@ -227,23 +234,27 @@ def append_bulk_result(result, bucket, payload):
 
 
 def build_payment_request_email(invoice, payment_request):
-	outstanding_amount = fmt_money(invoice.outstanding_amount, currency=frappe.get_cached_value("Company", invoice.company, "default_currency"))
+	grand_total = fmt_money(
+		invoice.grand_total,
+		currency=frappe.get_cached_value("Company", invoice.company, "default_currency"),
+	)
+	doc_context = frappe._dict(
+		{
+			"contact_person": getattr(payment_request, "contact_person", None) or invoice.student_name,
+			"doctype": "Sales Invoice",
+			"name": invoice.sales_invoice,
+			"grand_total": grand_total,
+		}
+	)
 
-	return _(
-		"""
-		Dear {student_name},<br><br>
-		A payment request has been created for your invoice <b>{invoice_name}</b> with an outstanding amount of <b>{outstanding_amount}</b>.<br><br>
-		To complete payment, please use the student fees portal below:<br>
-		<a href="{redirect_url}">{redirect_url}</a><br><br>
-		Payment Request Reference: <b>{payment_request_name}</b><br><br>
-		Thank you.
-		"""
-	).format(
-		student_name=invoice.student_name,
-		invoice_name=invoice.sales_invoice,
-		outstanding_amount=outstanding_amount,
-		redirect_url=STUDENT_FEES_REDIRECT_URL,
-		payment_request_name=payment_request.name,
+	return frappe.render_template(
+		PAYMENT_REQUEST_EMAIL_TEMPLATE,
+		{
+			"doc": doc_context,
+			"payment_url": STUDENT_FEES_REDIRECT_URL,
+			"payment_request": payment_request,
+			"invoice": invoice,
+		},
 	)
 
 

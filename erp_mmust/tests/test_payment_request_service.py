@@ -9,6 +9,7 @@ from erp_mmust.services.payment_request_service import (
 	bulk_create_and_send,
 	build_payment_request_email,
 	classify_payment_state,
+	PAYMENT_REQUEST_EMAIL_TEMPLATE,
 	prepare_invoice_rows,
 	STUDENT_FEES_REDIRECT_URL,
 )
@@ -85,12 +86,14 @@ class TestPaymentRequestService(FrappeTestCase):
 				"company": "MMUST",
 			}
 		)
-		payment_request = frappe._dict({"name": "PR-001"})
+		payment_request = frappe._dict({"name": "PR-001", "contact_person": "Student Contact"})
 
 		message = build_payment_request_email(invoice, payment_request)
 
+		self.assertTrue(PAYMENT_REQUEST_EMAIL_TEMPLATE.strip().startswith("<p>Dear {{ doc.contact_person }},</p>"))
 		self.assertIn(STUDENT_FEES_REDIRECT_URL, message)
-		self.assertIn("PR-001", message)
+		self.assertIn("Dear Student Contact", message)
+		self.assertIn("Sales Invoice, SINV-001", message)
 
 	@patch("erp_mmust.services.payment_request_service.frappe.log_error")
 	@patch("erp_mmust.services.payment_request_service.send_custom_payment_request_email")
