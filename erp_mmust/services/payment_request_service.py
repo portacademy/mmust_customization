@@ -1,11 +1,11 @@
 import frappe
 from frappe import _
-from frappe.utils import cint, date_diff, flt, getdate, today
+from frappe.utils import cint, date_diff, flt, fmt_money, getdate, today
 
-from erpnext.accounts.doctype.payment_request.payment_request import (
-	make_payment_request,
-	resend_payment_email,
-)
+from erpnext.accounts.doctype.payment_request.payment_request import make_payment_request
+
+
+STUDENT_FEES_REDIRECT_URL = "https://mmust.rhocomtech.com/Student/MyFees"
 
 
 def normalize_invoice_names(invoice_names):
@@ -226,6 +226,42 @@ def append_bulk_result(result, bucket, payload):
 	result[f"{bucket}_count"] = len(result[bucket])
 
 
+def build_payment_request_email(invoice, payment_request):
+	outstanding_amount = fmt_money(invoice.outstanding_amount, currency=frappe.get_cached_value("Company", invoice.company, "default_currency"))
+
+	return _(
+		"""
+		Dear {student_name},<br><br>
+		A payment request has been created for your invoice <b>{invoice_name}</b> with an outstanding amount of <b>{outstanding_amount}</b>.<br><br>
+		To complete payment, please use the student fees portal below:<br>
+		<a href="{redirect_url}">{redirect_url}</a><br><br>
+		Payment Request Reference: <b>{payment_request_name}</b><br><br>
+		Thank you.
+		"""
+	).format(
+		student_name=invoice.student_name,
+		invoice_name=invoice.sales_invoice,
+		outstanding_amount=outstanding_amount,
+		redirect_url=STUDENT_FEES_REDIRECT_URL,
+		payment_request_name=payment_request.name,
+	)
+
+
+def send_custom_payment_request_email(invoice, payment_request):
+	message = build_payment_request_email(invoice, payment_request)
+	payment_request.message = message
+	payment_request.save(ignore_permissions=True)
+
+	frappe.sendmail(
+		recipients=[invoice.email_id],
+		subject=_("Payment Request for {0}").format(invoice.sales_invoice),
+		message=message,
+		reference_doctype="Payment Request",
+		reference_name=payment_request.name,
+		now=True,
+	)
+
+
 @frappe.whitelist()
 def bulk_create_and_send(invoice_names):
 	invoice_names = normalize_invoice_names(invoice_names)
@@ -293,7 +329,7 @@ def bulk_create_and_send(invoice_names):
 				mute_email=1,
 				return_doc=1,
 			)
-			resend_payment_email(payment_request.name)
+			send_custom_payment_request_email(invoice, payment_request)
 
 			append_bulk_result(
 				result,

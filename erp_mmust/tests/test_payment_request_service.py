@@ -7,8 +7,10 @@ from erp_mmust.services.payment_request_service import (
 	apply_invoice_filters,
 	attach_latest_payment_request_status,
 	bulk_create_and_send,
+	build_payment_request_email,
 	classify_payment_state,
 	prepare_invoice_rows,
+	STUDENT_FEES_REDIRECT_URL,
 )
 
 
@@ -72,8 +74,26 @@ class TestPaymentRequestService(FrappeTestCase):
 		self.assertEqual(rows[1].payment_request_status, "Cancelled")
 		self.assertIsNone(rows[2].payment_request_status)
 
+	@patch("erp_mmust.services.payment_request_service.frappe.get_cached_value")
+	def test_build_payment_request_email_uses_custom_redirect_url(self, mock_get_cached_value):
+		mock_get_cached_value.return_value = "KES"
+		invoice = frappe._dict(
+			{
+				"student_name": "Student One",
+				"sales_invoice": "SINV-001",
+				"outstanding_amount": 1200,
+				"company": "MMUST",
+			}
+		)
+		payment_request = frappe._dict({"name": "PR-001"})
+
+		message = build_payment_request_email(invoice, payment_request)
+
+		self.assertIn(STUDENT_FEES_REDIRECT_URL, message)
+		self.assertIn("PR-001", message)
+
 	@patch("erp_mmust.services.payment_request_service.frappe.log_error")
-	@patch("erp_mmust.services.payment_request_service.resend_payment_email")
+	@patch("erp_mmust.services.payment_request_service.send_custom_payment_request_email")
 	@patch("erp_mmust.services.payment_request_service.make_payment_request")
 	@patch("erp_mmust.services.payment_request_service.get_payment_request_map")
 	@patch("erp_mmust.services.payment_request_service.get_student_invoice_rows")
@@ -82,7 +102,7 @@ class TestPaymentRequestService(FrappeTestCase):
 		mock_get_student_invoice_rows,
 		mock_get_payment_request_map,
 		mock_make_payment_request,
-		mock_resend_payment_email,
+		mock_send_custom_payment_request_email,
 		mock_log_error,
 	):
 		mock_get_student_invoice_rows.return_value = [
@@ -136,5 +156,5 @@ class TestPaymentRequestService(FrappeTestCase):
 		self.assertTrue(any(row["invoice_name"] == "SINV-004" for row in result["skipped"]))
 		self.assertTrue(any(row["invoice_name"] == "SINV-002" for row in result["failed"]))
 		self.assertTrue(any(row["invoice_name"] == "SINV-003" for row in result["failed"]))
-		mock_resend_payment_email.assert_called_once_with("PR-NEW-001")
+		mock_send_custom_payment_request_email.assert_called_once()
 		mock_log_error.assert_called_once()
