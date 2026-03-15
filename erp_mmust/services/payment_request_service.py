@@ -275,7 +275,7 @@ def bulk_create_and_send(invoice_names):
 				"failed",
 				{
 					"invoice_name": invoice_name,
-					"reason": _("Customer email is required before sending a Payment Request."),
+					"reason": _("Student email is required before sending a Payment Request."),
 				},
 			)
 			continue
