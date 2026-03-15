@@ -190,7 +190,7 @@ def get_student_invoice_rows(filters=None, invoice_names=None, include_payment_r
 			si.due_date,
 			si.grand_total,
 			si.outstanding_amount,
-			COALESCE(NULLIF(si.contact_email, ''), NULLIF(c.custom_email, '')) AS email_id
+			c.custom_email AS email_id
 		FROM `tabSales Invoice` si
 		INNER JOIN `tabCustomer` c ON c.name = si.customer
 		WHERE {" AND ".join(conditions)}
