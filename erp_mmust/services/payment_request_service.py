@@ -260,8 +260,6 @@ def build_payment_request_email(invoice, payment_request):
 
 def send_custom_payment_request_email(invoice, payment_request):
 	message = build_payment_request_email(invoice, payment_request)
-	payment_request.message = message
-	payment_request.save(ignore_permissions=True)
 
 	frappe.sendmail(
 		recipients=[invoice.email_id],
