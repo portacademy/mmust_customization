@@ -16,14 +16,15 @@ frappe.query_reports["Fee Collection Global"] = {
         },
         {
             "fieldname": "account",
-            "label": __("Account"),
+            "label": __("Income Account"),
             "fieldtype": "Link",
             "options": "Account",
             "default": "41-00-000 - Revenue from Exchange Transactions - MMUST",
             "get_query": function () {
                 return {
                     "filters": {
-                        "is_group": 1
+                        "is_group": 1,
+                        "root_type": "Income"
                     }
                 };
             }

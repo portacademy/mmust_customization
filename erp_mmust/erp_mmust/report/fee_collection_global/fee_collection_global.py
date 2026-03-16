@@ -1,14 +1,15 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 def execute(filters=None):
-    if not filters:
-        filters = {}
+    filters = filters or {}
 
     columns = get_columns()
     data = get_data(filters)
-    
-    return columns, data, None, None, None
+    summary = get_summary(data)
+
+    return columns, data, None, None, summary
 
 def get_columns():
     return [
@@ -38,54 +39,120 @@ def get_data(filters):
     if not parent_account:
         return []
 
-    # 1. Get all descendant accounts (including parent)
     descendants = frappe.db.get_descendants("Account", parent_account)
     descendants.append(parent_account)
 
-    # 2. Filter these descendants by name/number
     account_filter_values = {"accounts": tuple(descendants)}
     account_conditions = ["name IN %(accounts)s"]
+
     if filters.get("account_name"):
         account_conditions.append("account_name LIKE %(account_name)s")
         account_filter_values["account_name"] = f"%{filters.get('account_name')}%"
+
     if filters.get("account_number"):
         account_conditions.append("name LIKE %(account_number)s")
         account_filter_values["account_number"] = f"%{filters.get('account_number')}%"
 
-    accounts_to_process = frappe.db.sql(f"""
+    accounts_to_process = frappe.db.sql(
+        f"""
         SELECT name, account_name
         FROM `tabAccount`
         WHERE {" AND ".join(account_conditions)}
-    """, account_filter_values, as_dict=True)
+        """,
+        account_filter_values,
+        as_dict=True,
+    )
 
-    # 3. Get balances for these accounts for the date range
-    data = []
-    date_filters = ""
-    date_values = {}
+    if not accounts_to_process:
+        return []
+
+    filters = dict(filters)
+    filters["accounts"] = tuple(acc.name for acc in accounts_to_process)
+
+    conditions = get_conditions(filters)
+
+    return frappe.db.sql(
+        """
+        SELECT
+            vote_totals.vote AS account_number,
+            MAX(acc.account_name) AS account_name,
+            ROUND(
+                SUM(
+                    COALESCE(
+                        per.allocated_amount
+                        * (vote_totals.vote_total / NULLIF(invoice_totals.invoice_total, 0)),
+                        0
+                    )
+                ),
+                2
+            ) AS amount
+        FROM `tabPayment Entry` pe
+        INNER JOIN `tabCustomer` c
+            ON c.name = pe.party
+        INNER JOIN `tabPayment Entry Reference` per
+            ON per.parent = pe.name
+            AND per.parenttype = 'Payment Entry'
+            AND per.reference_doctype = 'Sales Invoice'
+        INNER JOIN `tabSales Invoice` si
+            ON si.name = per.reference_name
+            AND si.docstatus = 1
+        INNER JOIN (
+            SELECT
+                parent AS invoice_name,
+                income_account AS vote,
+                SUM(net_amount) AS vote_total
+            FROM `tabSales Invoice Item`
+            GROUP BY parent, income_account
+        ) AS vote_totals
+            ON vote_totals.invoice_name = si.name
+        INNER JOIN (
+            SELECT
+                parent AS invoice_name,
+                SUM(net_amount) AS invoice_total
+            FROM `tabSales Invoice Item`
+            GROUP BY parent
+        ) AS invoice_totals
+            ON invoice_totals.invoice_name = si.name
+        LEFT JOIN `tabAccount` acc
+            ON acc.name = vote_totals.vote
+        WHERE
+            pe.docstatus = 1
+            AND pe.payment_type = 'Receive'
+            AND pe.party_type = 'Customer'
+            AND c.customer_group = 'Student'
+            AND vote_totals.vote IN %(accounts)s
+            {conditions}
+        GROUP BY vote_totals.vote
+        HAVING amount != 0
+        ORDER BY vote_totals.vote ASC
+        """.format(conditions=conditions),
+        filters,
+        as_dict=True,
+    )
+
+
+def get_conditions(filters):
+    conditions = []
+
     if filters.get("from_date"):
-        date_filters += " AND posting_date >= %(from_date)s"
-        date_values["from_date"] = filters.get("from_date")
-    if filters.get("to_date"):
-        date_filters += " AND posting_date <= %(to_date)s"
-        date_values["to_date"] = filters.get("to_date")
+        conditions.append("AND pe.posting_date >= %(from_date)s")
 
-    for acc in accounts_to_process:
-        balance_values = {"account": acc.name}
-        balance_values.update(date_values)
-        
-        balance = frappe.db.sql(f"""
-            SELECT SUM(credit) - SUM(debit)
-            FROM `tabGL Entry`
-            WHERE account = %(account)s {date_filters}
-        """, balance_values, as_list=True)
-        
-        balance = balance[0][0] if balance and balance[0][0] is not None else 0
-        
-        if balance != 0:
-            data.append({
-                "account_number": acc.name,
-                "account_name": acc.account_name,
-                "amount": balance
-            })
-            
-    return data
+    if filters.get("to_date"):
+        conditions.append("AND pe.posting_date <= %(to_date)s")
+
+    return " ".join(conditions)
+
+
+def get_summary(data):
+    return [
+        {
+            "label": _("Total Collections"),
+            "value": sum(flt(row.get("amount")) for row in data),
+            "datatype": "Currency",
+        },
+        {
+            "label": _("Total Accounts"),
+            "value": len(data),
+            "datatype": "Int",
+        },
+    ]

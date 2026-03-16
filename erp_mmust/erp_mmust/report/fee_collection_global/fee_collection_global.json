@@ -13,7 +13,7 @@
     "module": "Erp Mmust",
     "name": "Fee Collection Global",
     "owner": "Administrator",
-    "ref_doctype": "GL Entry",
+    "ref_doctype": "Payment Entry",
     "report_name": "Fee Collection Global",
     "report_type": "Script Report",
     "roles": []
