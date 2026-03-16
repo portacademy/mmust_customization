@@ -445,8 +445,8 @@ class StudentRefund(Document):
             'dvc_narration'
         ]
         for field in narration_fields:
-            if doc.get(field):
-                doc.set(field, '')
+            if self.get(field):
+                self.set(field, '')
 
 
 
