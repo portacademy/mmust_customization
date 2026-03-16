@@ -747,7 +747,7 @@ def trigger_portal_webhook(doc, method):
 
         try:
             from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
-            webhook = frappe.get_doc("Webhook", "Student Hostel Refund Trigger")
+            webhook = frappe.get_doc("Webhook", "Student Hostel Refund")
             enqueue_webhook(doc, webhook)
             frappe.log_error(title="Portal Webhook Triggered", message=f"Hostel webhook triggered for {doc.name}")
         except Exception as e:
