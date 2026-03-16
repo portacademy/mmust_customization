@@ -452,8 +452,6 @@ class StudentRefund(Document):
 
 
 
-
-
 @frappe.whitelist()
 def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filters):
     funder = filters.get("funder")
