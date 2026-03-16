@@ -705,7 +705,27 @@ def get_graduation_student_balance(customer):
 
 
 
+# def trigger_portal_webhook(doc, method):
+#     if (doc.workflow_state == "Closed" and 
+#         doc.request_type == "Graduation" and 
+#         doc.action_type == "Refund a Student" and
+#         doc.custom_portal_refund_id):
+        
+#         try:
+#             from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
+#             webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
+#             enqueue_webhook(doc, webhook)
+#             frappe.log_error(title="Portal Webhook Triggered", message=f"Webhook triggered for {doc.name}")
+#         except Exception as e:
+#             frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+#     else:
+#         frappe.log_error(title="Portal Webhook Skipped", message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}")
+
+
+
+
 def trigger_portal_webhook(doc, method):
+    # Graduation refund
     if (doc.workflow_state == "Closed" and 
         doc.request_type == "Graduation" and 
         doc.action_type == "Refund a Student" and
@@ -715,8 +735,26 @@ def trigger_portal_webhook(doc, method):
             from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
             webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
             enqueue_webhook(doc, webhook)
-            frappe.log_error(title="Portal Webhook Triggered", message=f"Webhook triggered for {doc.name}")
+            frappe.log_error(title="Portal Webhook Triggered", message=f"Graduation webhook triggered for {doc.name}")
         except Exception as e:
             frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+
+    # Hostel refund
+    elif (doc.workflow_state == "Hostel Closed" and
+          doc.request_type == "Hostel" and
+          doc.action_type == "Hostel Refund" and
+          doc.custom_portal_refund_id):
+
+        try:
+            from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
+            webhook = frappe.get_doc("Webhook", "Student Hostel Refund Trigger")
+            enqueue_webhook(doc, webhook)
+            frappe.log_error(title="Portal Webhook Triggered", message=f"Hostel webhook triggered for {doc.name}")
+        except Exception as e:
+            frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+
     else:
-        frappe.log_error(title="Portal Webhook Skipped", message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}")
+        frappe.log_error(
+            title="Portal Webhook Skipped",
+            message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}"
+        )
