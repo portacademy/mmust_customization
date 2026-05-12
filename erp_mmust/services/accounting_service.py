@@ -16,12 +16,14 @@ def process_accounting(doc, method=None):
         message=f"doc: {doc.name} | state: '{state}' | request_type: '{doc.request_type}' | action_type: '{doc.action_type}'"
     )
     try:
-        if state ==  "Pending PV" and doc.action_type == "Refund to Funder":
+        if state == "Pending PV" and doc.action_type == "Refund to Funder" and doc.refund_type != "Refund Unallocated Amount":
             post_receipt_cancellation(doc)
         elif state == "Closed" and doc.action_type == "Reallocate to Student":
             post_reallocation_journal_entry(doc)
-        elif state == "Closed" and doc.action_type == "Refund to Funder":
+        elif state == "Closed" and doc.action_type == "Refund to Funder" and doc.refund_type == "Refund Allocated Amount":
             post_refund_payment_entry(doc)
+        elif state == "Closed" and doc.action_type == "Refund to Funder" and doc.refund_type == "Refund Unallocated Amount":
+            post_excess_allocation_return(doc)
         elif state == "Receipt Cancelled" and doc.action_type == "Receipt Cancellation":
             post_full_receipt_cancellation(doc)
         elif state == "Hostel Closed" and doc.request_type == "Hostel":
@@ -1462,6 +1464,105 @@ def post_graduation_student_refund(doc):
     )
 
     
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REFUND EXCESS ALLOCATION — Return unspent sponsorship funds to sponsor
+# Dr School Bank Account (Account Paid To) / Cr Sponsor GL Account
+# ─────────────────────────────────────────────────────────────────────────────
+
+def post_excess_allocation_return(doc):
+    """
+    Called when a 'Refund Excess Allocation' Student Refund reaches 'Closed'.
+    Posts a Journal Entry:
+        Dr  School Bank Account  (money leaves school)
+        Cr  Sponsor GL Account   (liability to sponsor restored)
+    """
+    if frappe.db.get_value("Student Refund", doc.name, "excess_return_je"):
+        return  # idempotency guard — already posted
+
+    if not doc.excess_sponsorship_allocation:
+        frappe.throw("Sponsorship Allocation is required to post excess allocation return.")
+
+    currency = get_currency()
+    company  = get_company()
+    amount   = flt(doc.excess_amount_to_return)
+
+    if amount <= 0:
+        frappe.throw("Amount to Return is zero — cannot post excess allocation return.")
+
+    school_bank_account = doc.excess_school_bank_account
+    sponsor_gl_account  = doc.excess_sponsor_gl_account
+
+    if not school_bank_account:
+        frappe.throw(
+            "School Bank Account is missing on this document. "
+            "Please re-select the Sponsorship Allocation.",
+            title="Missing Account"
+        )
+    if not sponsor_gl_account:
+        frappe.throw(
+            "Sponsor GL Account is missing on this document. "
+            "Please re-select the Sponsorship Allocation.",
+            title="Missing Account"
+        )
+
+    sa_name   = doc.excess_sponsorship_allocation
+    sa        = frappe.get_doc("Sponsorship Allocation", sa_name)
+    funder    = sa.donor
+    funder_name = sa.donor_name or funder
+
+    je = frappe.new_doc("Journal Entry")
+    je.voucher_type = "Bank Entry"
+    je.company      = company
+    je.posting_date = nowdate()
+    je.cheque_no    = doc.name
+    je.cheque_date  = nowdate()
+    je.user_remark  = (
+        f"Excess Allocation Return | {doc.name} | "
+        f"Sponsorship Allocation: {sa_name} | "
+        f"Sponsor: {funder_name} ({funder})"
+    )
+
+    # Dr School Bank Account — money leaves the school
+    je.append("accounts", {
+        "account":                    school_bank_account,
+        "debit_in_account_currency":  0,
+        "credit_in_account_currency": amount,
+        "user_remark": (
+            f"Excess allocation return to {funder_name} | SA: {sa_name}"
+        )
+    })
+
+    # Cr Sponsor GL Account — liability to sponsor restored
+    je.append("accounts", {
+        "account":                    sponsor_gl_account,
+        "party_type":                 "Donor",
+        "party":                      funder,
+        "debit_in_account_currency":  amount,
+        "credit_in_account_currency": 0,
+        "user_remark": (
+            f"Excess allocation return — reducing sponsor liability | SA: {sa_name}"
+        )
+    })
+
+    je.insert(ignore_permissions=True)
+    je.submit()
+
+    frappe.db.set_value("Student Refund", doc.name, "excess_return_je", je.name)
+    frappe.db.set_value("Student Refund", doc.name, "debit_account",  school_bank_account)
+    frappe.db.set_value("Student Refund", doc.name, "credit_account", sponsor_gl_account)
+
+    frappe.msgprint(
+        f"✅ Excess Allocation Return posted.<br>"
+        f"Journal Entry: <b>{je.name}</b><br>"
+        f"Dr {school_bank_account} (School Bank — money out)<br>"
+        f"Cr {sponsor_gl_account} ({funder_name})<br>"
+        f"Amount Returned: <b>{currency} {amount:,.2f}</b>",
+        title="Excess Allocation Return Posted",
+        indicator="green"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

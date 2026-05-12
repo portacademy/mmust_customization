@@ -282,6 +282,9 @@ fixtures = [
 #     }
 # }
 
+# Runs after every bench migrate — ensures field order is always correct
+after_migrate = ["erp_mmust.patches.reset_student_refund_field_order.execute"]
+
 doc_events = {
 
     "Student Refund": {

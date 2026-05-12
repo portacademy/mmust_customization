@@ -4,3 +4,4 @@
 
 [post_model_sync]
 erp_mmust.patches.create_student_refund_notifications_all
+erp_mmust.patches.reset_student_refund_field_order

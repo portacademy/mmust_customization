@@ -24,8 +24,14 @@
         },
         {
             "fieldname": "refund_print_format",
-            "label": "Refund Print Format",
+            "label": "Refund to Funder Allocated Print Format",
             "fieldtype": "Link",
+            "options": "Print Format"
+        },
+        {
+            "fieldname": "refund_unallocated_print_format",
+            "fieldtype": "Link",
+            "label": "Refund to Funder Unallocated Print Format",
             "options": "Print Format"
         },
         {

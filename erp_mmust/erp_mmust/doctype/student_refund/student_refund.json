@@ -1,869 +1,1034 @@
 {
-    "actions": [],
-    "autoname": "SRF-.YYYY.-.#####",
-    "creation": "2026-03-01 11:29:44.820024",
-    "doctype": "DocType",
-    "editable_grid": 1,
-    "engine": "InnoDB",
-    "field_order": [
-        "section_header",
-        "request_type",
-        "action_type",
-        "cancellation_label_helb",
-        "cancellation_label_cdf",
-        "col_break_1",
-        "academic_year",
-        "posting_date",
-        "section_graduation_refund",
-        "graduation_student",
-        "graduation_reg_no",
-        "graduation_student_name",
-        "graduation_phone",
-        "graduation_email",
-        "graduation_id_number",
-        "col_break_graduation",
-        "graduation_year_of_study",
-        "graduation_programme",
-        "graduation_school",
-        "graduation_department",
-        "graduation_ledger_balance",
-        "graduation_amount_to_refund",
-        "graduation_bank_account",
-        "section_graduation_bank_details",
-        "graduation_mode_of_refund",
-        "graduate_bank_name",
-        "graduate_account_number",
-        "graduation_swift_code",
-        "graduation_column_break_2",
-        "reason_for_graduation_refund",
-        "custom_portal_refund_id",
-        "section_funder",
-        "funder",
-        "funder_name",
-        "constituency_code",
-        "col_break_3",
-        "batch_number",
-        "request_reference",
-        "section_cheque_cancellation",
-        "cheque_donation",
-        "cheque_id",
-        "cheque_donation_amount",
-        "col_break_cheque",
-        "cheque_donation_date",
-        "cheque_donation_mode",
-        "section_cancellation_allocations",
-        "cancellation_allocations",
-        "section_donation",
-        "sponsorship_allocation",
-        "cancelled_sponsorship_allocation",
-        "donation_amount",
-        "custom_cheque_id",
-        "sponsorship_allocation_date",
-        "col_break_donation",
-        "total_allocated_in_donation",
-        "amount_refunded_to_donor",
-        "bank_account",
-        "section_beneficiaries",
-        "beneficiaries",
-        "section_reallocation",
-        "reallocations",
-        "section_cancellation",
-        "cancellation_beneficiaries",
-        "section_hostel_details",
-        "source_student",
-        "hostel_session",
-        "hostel_semester",
-        "col_break_hostel",
-        "narration",
-        "section_items",
-        "items",
-        "total_amount",
-        "section_narrations",
-        "registrar_narration",
-        "accountant_narration",
-        "col_break_narration_1",
-        "finance_officer_narration",
-        "section_narrations_2",
-        "internal_auditor_narration",
-        "col_break_narration_2",
-        "payable_accountant_narration",
-        "senior_accountant_narration",
-        "section_narrations_3",
-        "dvc_narration",
-        "col_break_narration_3",
-        "section_remarks_trail",
-        "remarks_trail_placeholder",
-        "remarks_trail",
-        "section_accounting",
-        "debit_account",
-        "credit_account",
-        "col_break_4",
-        "journal_entry",
-        "disbursement_journal_entry",
-        "sponsorship_reversal_je",
-        "reallocation_je",
-        "payment_entry",
-        "workflow_state",
-        "amended_from"
-    ],
-    "fields": [
-        {
-            "fieldname": "section_header",
-            "fieldtype": "Section Break",
-            "label": "Request Details"
-        },
-        {
-            "fieldname": "request_type",
-            "fieldtype": "Select",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Request Type",
-            "options": "\nHELB\nCDF\nScholarship\nGraduation\nHostel",
-            "reqd": 1
-        },
-        {
-            "fieldname": "action_type",
-            "fieldtype": "Select",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Action Type",
-            "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation\nHostel Refund\nRefund a Student",
-            "reqd": 1
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.request_type == 'HELB'",
-            "fieldname": "cancellation_label_helb",
-            "fieldtype": "HTML",
-            "options": "<div class=\"alert alert-warning\"><strong>Action:</strong> This will perform a <strong>Receipt Cancellation</strong> \u2014 the original HELB receipt will be reversed in the system.</div>"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.request_type == 'CDF'",
-            "fieldname": "cancellation_label_cdf",
-            "fieldtype": "HTML",
-            "options": "<div class=\"alert alert-warning\"><strong>Action:</strong> This will perform a <strong>Receipt AND Cheque Cancellation</strong> \u2014 both the original CDF receipt and the incoming cheque entry will be reversed in the system.</div>"
-        },
-        {
-            "fieldname": "col_break_1",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "academic_year",
-            "fieldtype": "Link",
-            "label": "Academic Year",
-            "options": "Academic Year",
-            "reqd": 1
-        },
-        {
-            "default": "Today",
-            "fieldname": "posting_date",
-            "fieldtype": "Date",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Posting Date",
-            "reqd": 1,
-            "search_index": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "section_graduation_refund",
-            "fieldtype": "Section Break",
-            "label": "Graduation Refund Details"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_student",
-            "fieldtype": "Link",
-            "label": "Student",
-            "options": "Customer",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fetch_from": "graduation_student.name",
-            "fieldname": "graduation_reg_no",
-            "fieldtype": "Data",
-            "label": "Reg No",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fetch_from": "graduation_student.customer_name",
-            "fieldname": "graduation_student_name",
-            "fieldtype": "Data",
-            "label": "Full Name",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_phone",
-            "fieldtype": "Data",
-            "label": "Phone Number",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_email",
-            "fieldtype": "Data",
-            "label": "Email",
-            "options": "Email",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_id_number",
-            "fieldtype": "Data",
-            "label": "Identity Number",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_graduation",
-            "fieldtype": "Column Break"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_year_of_study",
-            "fieldtype": "Data",
-            "label": "Year of Study",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_programme",
-            "fieldtype": "Select",
-            "label": "Refund for Programme",
-            "options": "\nCertificate Program\nDiploma\nRegular (On Campus)\nAll Programs",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_school",
-            "fieldtype": "Data",
-            "label": "School",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_department",
-            "fieldtype": "Data",
-            "label": "Department",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_ledger_balance",
-            "fieldtype": "Currency",
-            "label": "Current Student Balance",
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_amount_to_refund",
-            "fieldtype": "Currency",
-            "label": "Amount to Refund",
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_bank_account",
-            "fieldtype": "Link",
-            "label": "Payment Bank Account",
-            "options": "Account",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "section_graduation_bank_details",
-            "fieldtype": "Section Break",
-            "label": "Student Bank Details"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_mode_of_refund",
-            "fieldtype": "Select",
-            "label": "Mode of Refund",
-            "options": "\nCheque\nBank Transfer\nCash",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
-            "fieldname": "graduate_bank_name",
-            "fieldtype": "Data",
-            "label": "Bank Name",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
-            "fieldname": "graduate_account_number",
-            "fieldtype": "Data",
-            "label": "Account Number",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
-            "fieldname": "graduation_swift_code",
-            "fieldtype": "Data",
-            "label": "Bank Swift Code",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "graduation_column_break_2",
-            "fieldtype": "Column Break"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "reason_for_graduation_refund",
-            "fieldtype": "Small Text",
-            "label": "Reason for Refund",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
-            "fieldname": "custom_portal_refund_id",
-            "fieldtype": "Data",
-            "label": "College Portal Refund ID",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fieldname": "section_funder",
-            "fieldtype": "Section Break",
-            "label": "Funder / Sponsor Details"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "description": "External funder/donor (HELB, CDF Constituency, etc.)",
-            "fieldname": "funder",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Funder (Donor)",
-            "options": "Donor"
-        },
-        {
-            "fetch_from": "funder.donor_name",
-            "fieldname": "funder_name",
-            "fieldtype": "Data",
-            "label": "Funder Name",
-            "read_only": 1
-        },
-        {
-            "fetch_from": "funder.custom_constituency_code",
-            "fieldname": "constituency_code",
-            "fieldtype": "Data",
-            "label": "Constituency Code",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_3",
-            "fieldtype": "Column Break"
-        },
-        {
-            "allow_on_submit": 1,
-            "depends_on": "eval:in_list(['HELB','CDF'], doc.request_type)",
-            "description": "HELB Batch Number or CDF Cheque Number for original payment identification",
-            "fieldname": "batch_number",
-            "fieldtype": "Data",
-            "label": "HELB / CDF Batch Number",
-            "read_only": 1
-        },
-        {
-            "description": "Official letter/reference number from HELB/UFB/CDF",
-            "fieldname": "request_reference",
-            "fieldtype": "Data",
-            "label": "External Request Reference"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fieldname": "section_cheque_cancellation",
-            "fieldtype": "Section Break",
-            "label": "Cheque & Donation Details"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "description": "Select the Donation record for the cheque to be cancelled",
-            "fieldname": "cheque_donation",
-            "fieldtype": "Link",
-            "label": "Donation (Cheque)",
-            "options": "Donation"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fetch_from": "cheque_donation.custom_cheque_id",
-            "fieldname": "cheque_id",
-            "fieldtype": "Data",
-            "label": "Cheque Number",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fetch_from": "cheque_donation.amount",
-            "fieldname": "cheque_donation_amount",
-            "fieldtype": "Currency",
-            "label": "Donation Amount",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_cheque",
-            "fieldtype": "Column Break"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fetch_from": "cheque_donation.date",
-            "fieldname": "cheque_donation_date",
-            "fieldtype": "Date",
-            "label": "Donation Date",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fetch_from": "cheque_donation.mode_of_payment",
-            "fieldname": "cheque_donation_mode",
-            "fieldtype": "Data",
-            "label": "Mode of Payment",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.cheque_donation",
-            "fieldname": "section_cancellation_allocations",
-            "fieldtype": "Section Break",
-            "label": "Linked Sponsorship Allocations"
-        },
-        {
-            "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.cheque_donation",
-            "fieldname": "cancellation_allocations",
-            "fieldtype": "Table",
-            "label": "Sponsorship Allocations",
-            "options": "Student Refund Cancellation Allocation",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fieldname": "section_donation",
-            "fieldtype": "Section Break",
-            "label": "Sponsorship Allocation Details"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "description": "Link to the original Sponsorship Allocation document",
-            "fieldname": "sponsorship_allocation",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Sponsorship Allocation",
-            "options": "Sponsorship Allocation",
-            "search_index": 1
-        },
-        {
-            "description": "Link to the cancelled Sponsorship Allocation document",
-            "fieldname": "cancelled_sponsorship_allocation",
-            "fieldtype": "Data",
-            "label": "Cancelled Sponsorship Allocation",
-            "print_hide": 1,
-            "read_only": 1
-        },
-        {
-            "description": "Total amount from the original Sponsorship Allocation",
-            "fieldname": "donation_amount",
-            "fieldtype": "Currency",
-            "label": "Original Donation Amount",
-            "read_only": 1
-        },
-        {
-            "description": "Total amount from the original Sponsorship Allocation",
-            "fieldname": "custom_cheque_id",
-            "fieldtype": "Data",
-            "label": "Cheque ID",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
-            "fetch_from": "sponsorship_allocation.date",
-            "fieldname": "sponsorship_allocation_date",
-            "fieldtype": "Date",
-            "label": "Sponsorship Allocation Date",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_donation",
-            "fieldtype": "Column Break"
-        },
-        {
-            "description": "Total Allocated from the Sponsorship Allocation document",
-            "fieldname": "total_allocated_in_donation",
-            "fieldtype": "Currency",
-            "label": "Total Allocated in Sponsorship",
-            "read_only": 1
-        },
-        {
-            "description": "Total Allocated minus Sum of Amount to be refunded. This is what goes back to the Sponsor.",
-            "fieldname": "amount_refunded_to_donor",
-            "fieldtype": "Currency",
-            "label": "Amount Refunded to Donor",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.action_type == 'Refund to Funder'",
-            "description": "Bank account to pay the refunded money to the sponsor/funder",
-            "fieldname": "bank_account",
-            "fieldtype": "Link",
-            "label": "Payment Bank Account",
-            "options": "Account"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Refund to Funder'",
-            "fieldname": "section_beneficiaries",
-            "fieldtype": "Section Break",
-            "label": "Beneficiaries (Refund to Funder)"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Refund to Funder'",
-            "description": "Loaded from Sponsorship Allocation. Enter new reallocation amount for each beneficiary.",
-            "fieldname": "beneficiaries",
-            "fieldtype": "Table",
-            "label": "Beneficiaries",
-            "options": "Student Refund Beneficiary"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Reallocate to Student'",
-            "fieldname": "section_reallocation",
-            "fieldtype": "Section Break",
-            "label": "Reallocation Details (Reallocate to Student)"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Reallocate to Student'",
-            "description": "Loaded from Sponsorship Allocation. Select target student and amount to reallocate from each source student.",
-            "fieldname": "reallocations",
-            "fieldtype": "Table",
-            "label": "Reallocations",
-            "options": "Student Refund Reallocation"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.cheque_donation && doc.action_type == 'Receipt Cancellation'",
-            "fieldname": "section_cancellation",
-            "fieldtype": "Section Break",
-            "label": "Cancellation Beneficiaries"
-        },
-        {
-            "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.cheque_donation && doc.action_type == 'Receipt Cancellation'",
-            "fieldname": "cancellation_beneficiaries",
-            "fieldtype": "Table",
-            "label": "Cancellation Beneficiaries",
-            "options": "Student Refund Cancellation Beneficiary",
-            "read_only": 1
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "fieldname": "section_hostel_details",
-            "fieldtype": "Section Break",
-            "label": "Hostel Details"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "fieldname": "source_student",
-            "fieldtype": "Link",
-            "label": "Student",
-            "options": "Customer"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "description": "e.g. 2025/2026 \u2014 filters invoice list",
-            "fieldname": "hostel_session",
-            "fieldtype": "Data",
-            "label": "Session Filter"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "description": "e.g. Semester 1 \u2014 filters invoice list",
-            "fieldname": "hostel_semester",
-            "fieldtype": "Data",
-            "label": "Semester Filter"
-        },
-        {
-            "fieldname": "col_break_hostel",
-            "fieldtype": "Column Break"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "description": "Hostel Officer narration on stay status, room condition, and days occupied",
-            "fieldname": "narration",
-            "fieldtype": "Small Text",
-            "label": "Narration"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "fieldname": "section_items",
-            "fieldtype": "Section Break",
-            "label": "Hostel Payment Items to Reverse"
-        },
-        {
-            "depends_on": "eval:doc.request_type == 'Hostel'",
-            "description": "Only used for Hostel reversals",
-            "fieldname": "items",
-            "fieldtype": "Table",
-            "label": "Refund Items",
-            "options": "Student Refund Item"
-        },
-        {
-            "fieldname": "total_amount",
-            "fieldtype": "Currency",
-            "in_list_view": 1,
-            "label": "Total Refund Amount",
-            "read_only": 1
-        },
-        {
-            "fieldname": "section_narrations",
-            "fieldtype": "Section Break",
-            "label": "Remarks"
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Registrar",
-            "fieldname": "registrar_narration",
-            "fieldtype": "Small Text",
-            "label": "Registrar Remark",
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Student Finance Accountant",
-            "fieldname": "accountant_narration",
-            "fieldtype": "Small Text",
-            "label": "Accountant Remark",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_narration_1",
-            "fieldtype": "Column Break"
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Finance Officer",
-            "fieldname": "finance_officer_narration",
-            "fieldtype": "Small Text",
-            "label": "Finance Officer Remark",
-            "read_only": 1
-        },
-        {
-            "fieldname": "section_narrations_2",
-            "fieldtype": "Section Break"
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Internal Auditor",
-            "fieldname": "internal_auditor_narration",
-            "fieldtype": "Small Text",
-            "label": "Internal Auditor Remark",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_narration_2",
-            "fieldtype": "Column Break"
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Payable Accountant",
-            "fieldname": "payable_accountant_narration",
-            "fieldtype": "Small Text",
-            "label": "Payable Accountant Remark",
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by Senior Accountant Students Finance",
-            "fieldname": "senior_accountant_narration",
-            "fieldtype": "Small Text",
-            "label": "Senior Accountant Remark",
-            "read_only": 1
-        },
-        {
-            "fieldname": "section_narrations_3",
-            "fieldtype": "Section Break"
-        },
-        {
-            "allow_on_submit": 1,
-            "description": "Remark by DVC Finance",
-            "fieldname": "dvc_narration",
-            "fieldtype": "Small Text",
-            "label": "DVC Finance Remark",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_narration_3",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "section_remarks_trail",
-            "fieldtype": "Section Break",
-            "label": "Remarks Trail"
-        },
-        {
-            "depends_on": "eval:!doc.remarks_trail",
-            "fieldname": "remarks_trail_placeholder",
-            "fieldtype": "HTML",
-            "options": "<p style=\"color:#999; font-style:italic;\">No remarks recorded yet. Trail will appear here after the first workflow action with a remark.</p>"
-        },
-        {
-            "allow_on_submit": 1,
-            "fieldname": "remarks_trail",
-            "fieldtype": "Small Text",
-            "label": "Conversation Trail",
-            "read_only": 1
-        },
-        {
-            "collapsible": 1,
-            "fieldname": "section_accounting",
-            "fieldtype": "Section Break",
-            "label": "Accounting Details"
-        },
-        {
-            "fieldname": "debit_account",
-            "fieldtype": "Link",
-            "label": "Debit Account",
-            "options": "Account",
-            "read_only": 1
-        },
-        {
-            "fieldname": "credit_account",
-            "fieldtype": "Link",
-            "label": "Credit Account",
-            "options": "Account",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_4",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "journal_entry",
-            "fieldtype": "Link",
-            "label": "Journal Entry",
-            "options": "Journal Entry",
-            "read_only": 1
-        },
-        {
-            "fieldname": "disbursement_journal_entry",
-            "fieldtype": "Link",
-            "label": "Disbursement Journal Entry",
-            "options": "Journal Entry",
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "fieldname": "sponsorship_reversal_je",
-            "fieldtype": "Link",
-            "label": "Sponsorship Reversal Journal Entry",
-            "no_copy": 1,
-            "options": "Journal Entry",
-            "print_hide": 1,
-            "read_only": 1
-        },
-        {
-            "allow_on_submit": 1,
-            "fieldname": "reallocation_je",
-            "fieldtype": "Link",
-            "label": "Reallocation Journal Entry",
-            "no_copy": 1,
-            "options": "Journal Entry",
-            "print_hide": 1,
-            "read_only": 1
-        },
-        {
-            "fieldname": "payment_entry",
-            "fieldtype": "Link",
-            "label": "Payment Entry",
-            "options": "Payment Entry",
-            "read_only": 1
-        },
-        {
-            "fieldname": "workflow_state",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Workflow State",
-            "options": "Workflow State",
-            "read_only": 1
-        },
-        {
-            "fieldname": "amended_from",
-            "fieldtype": "Link",
-            "label": "Amended From",
-            "options": "Student Refund",
-            "print_hide": 1,
-            "read_only": 1
-        }
-    ],
-    "is_submittable": 1,
-    "links": [],
-    "modified": "2026-03-01 14:23:25.383751",
-    "modified_by": "Administrator",
-    "module": "Erp Mmust",
-    "name": "Student Refund",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "amend": 1,
-            "create": 1,
-            "read": 1,
-            "role": "Student Finance Accountant",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "read": 1,
-            "role": "Finance Officer",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "read": 1,
-            "role": "DVC Finance",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "read": 1,
-            "role": "Internal Auditor",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "read": 1,
-            "role": "Payable Accountant",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "create": 1,
-            "read": 1,
-            "role": "Registrar",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "read": 1,
-            "role": "Senior Accountant Students Finance",
-            "submit": 1,
-            "write": 1
-        },
-        {
-            "amend": 1,
-            "cancel": 1,
-            "create": 1,
-            "delete": 1,
-            "read": 1,
-            "role": "Accounts Manager",
-            "submit": 1,
-            "write": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "search_fields": "request_type,workflow_state",
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "states": [],
-    "title_field": "request_type",
-    "track_changes": 1
+ "actions": [],
+ "autoname": "SRF-.YYYY.-.#####",
+ "creation": "2026-03-01 11:29:44.820024",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_header",
+  "request_type",
+  "action_type",
+  "refund_type",
+  "cancellation_label_helb",
+  "cancellation_label_cdf",
+  "col_break_1",
+  "academic_year",
+  "posting_date",
+  "section_graduation_refund",
+  "graduation_student",
+  "graduation_reg_no",
+  "graduation_student_name",
+  "graduation_phone",
+  "graduation_email",
+  "graduation_id_number",
+  "col_break_graduation",
+  "graduation_year_of_study",
+  "graduation_programme",
+  "graduation_school",
+  "graduation_department",
+  "graduation_ledger_balance",
+  "graduation_amount_to_refund",
+  "graduation_bank_account",
+  "section_graduation_bank_details",
+  "graduation_mode_of_refund",
+  "graduate_bank_name",
+  "graduate_account_number",
+  "graduation_swift_code",
+  "graduation_column_break_2",
+  "reason_for_graduation_refund",
+  "custom_portal_refund_id",
+  "section_funder",
+  "funder",
+  "funder_name",
+  "constituency_code",
+  "col_break_3",
+  "batch_number",
+  "request_reference",
+  "section_cheque_cancellation",
+  "cheque_donation",
+  "cheque_id",
+  "cheque_donation_amount",
+  "col_break_cheque",
+  "cheque_donation_date",
+  "cheque_donation_mode",
+  "section_cancellation_allocations",
+  "cancellation_allocations",
+  "section_donation",
+  "sponsorship_allocation",
+  "cancelled_sponsorship_allocation",
+  "donation_amount",
+  "custom_cheque_id",
+  "sponsorship_allocation_date",
+  "col_break_donation",
+  "total_allocated_in_donation",
+  "amount_refunded_to_donor",
+  "bank_account",
+  "section_beneficiaries",
+  "beneficiaries",
+  "section_reallocation",
+  "reallocations",
+  "section_cancellation",
+  "cancellation_beneficiaries",
+  "section_hostel_details",
+  "source_student",
+  "hostel_session",
+  "hostel_semester",
+  "col_break_hostel",
+  "narration",
+  "section_items",
+  "items",
+  "total_amount",
+  "section_excess_allocation",
+  "excess_sponsorship_allocation",
+  "excess_funder",
+  "excess_funder_name",
+  "col_break_excess_1",
+  "excess_total_donated",
+  "excess_sa_balance",
+  "section_excess_accounts",
+  "excess_school_bank_account",
+  "excess_school_bank_gl_balance",
+  "col_break_excess_2",
+  "excess_sponsor_gl_account",
+  "excess_previously_returned",
+  "section_excess_amount",
+  "excess_max_transferable",
+  "excess_amount_to_return",
+  "col_break_excess_3",
+  "excess_narration",
+  "excess_return_je",
+  "section_accounting",
+  "debit_account",
+  "credit_account",
+  "col_break_4",
+  "journal_entry",
+  "disbursement_journal_entry",
+  "sponsorship_reversal_je",
+  "reallocation_je",
+  "payment_entry",
+  "section_narrations",
+  "registrar_narration",
+  "accountant_narration",
+  "col_break_narration_1",
+  "finance_officer_narration",
+  "section_narrations_2",
+  "internal_auditor_narration",
+  "col_break_narration_2",
+  "payable_accountant_narration",
+  "senior_accountant_narration",
+  "section_narrations_3",
+  "dvc_narration",
+  "col_break_narration_3",
+  "section_remarks_trail",
+  "remarks_trail_placeholder",
+  "remarks_trail",
+  "workflow_state",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_header",
+   "fieldtype": "Section Break",
+   "label": "Request Details"
+  },
+  {
+   "fieldname": "request_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Request Type",
+   "options": "\nHELB\nCDF\nScholarship\nGraduation\nHostel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Action Type",
+   "options": "\nRefund to Funder\nReallocate to Student\nReceipt Cancellation\nHostel Refund\nRefund a Student",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fieldname": "refund_type",
+   "fieldtype": "Select",
+   "label": "Refund Type",
+   "mandatory_depends_on": "eval:doc.action_type == 'Refund to Funder' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "options": "\nRefund Allocated Amount\nRefund Unallocated Amount"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.request_type == 'HELB'",
+   "fieldname": "cancellation_label_helb",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-warning\"><strong>Action:</strong> This will perform a <strong>Receipt Cancellation</strong> \u2014 the original HELB receipt will be reversed in the system.</div>"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.request_type == 'CDF'",
+   "fieldname": "cancellation_label_cdf",
+   "fieldtype": "HTML",
+   "options": "<div class=\"alert alert-warning\"><strong>Action:</strong> This will perform a <strong>Receipt AND Cheque Cancellation</strong> \u2014 both the original CDF receipt and the incoming cheque entry will be reversed in the system.</div>"
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Posting Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "section_graduation_refund",
+   "fieldtype": "Section Break",
+   "label": "Graduation Refund Details"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fetch_from": "graduation_student.name",
+   "fieldname": "graduation_reg_no",
+   "fieldtype": "Data",
+   "label": "Reg No",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fetch_from": "graduation_student.customer_name",
+   "fieldname": "graduation_student_name",
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_phone",
+   "fieldtype": "Data",
+   "label": "Phone Number",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_id_number",
+   "fieldtype": "Data",
+   "label": "Identity Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_graduation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_year_of_study",
+   "fieldtype": "Data",
+   "label": "Year of Study",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_programme",
+   "fieldtype": "Select",
+   "label": "Refund for Programme",
+   "options": "\nCertificate Program\nDiploma\nRegular (On Campus)\nAll Programs",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_school",
+   "fieldtype": "Data",
+   "label": "School",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_department",
+   "fieldtype": "Data",
+   "label": "Department",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_ledger_balance",
+   "fieldtype": "Currency",
+   "label": "Current Student Balance",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_amount_to_refund",
+   "fieldtype": "Currency",
+   "label": "Amount to Refund",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_bank_account",
+   "fieldtype": "Link",
+   "label": "Payment Bank Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "section_graduation_bank_details",
+   "fieldtype": "Section Break",
+   "label": "Student Bank Details"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_mode_of_refund",
+   "fieldtype": "Select",
+   "label": "Mode of Refund",
+   "options": "\nCheque\nBank Transfer\nCash",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
+   "fieldname": "graduate_bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
+   "fieldname": "graduate_account_number",
+   "fieldtype": "Data",
+   "label": "Account Number",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student' && doc.graduation_mode_of_refund == 'Bank Transfer'",
+   "fieldname": "graduation_swift_code",
+   "fieldtype": "Data",
+   "label": "Bank Swift Code",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "graduation_column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "reason_for_graduation_refund",
+   "fieldtype": "Small Text",
+   "label": "Reason for Refund",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Graduation' && doc.action_type == 'Refund a Student'",
+   "fieldname": "custom_portal_refund_id",
+   "fieldtype": "Data",
+   "label": "College Portal Refund ID",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fieldname": "section_funder",
+   "fieldtype": "Section Break",
+   "label": "Funder / Sponsor Details"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "description": "External funder/donor (HELB, CDF Constituency, etc.)",
+   "fieldname": "funder",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Funder (Donor)",
+   "options": "Donor"
+  },
+  {
+   "fetch_from": "funder.donor_name",
+   "fieldname": "funder_name",
+   "fieldtype": "Data",
+   "label": "Funder Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "funder.custom_constituency_code",
+   "fieldname": "constituency_code",
+   "fieldtype": "Data",
+   "label": "Constituency Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:in_list(['HELB','CDF'], doc.request_type)",
+   "description": "HELB Batch Number or CDF Cheque Number for original payment identification",
+   "fieldname": "batch_number",
+   "fieldtype": "Data",
+   "label": "HELB / CDF Batch Number",
+   "read_only": 1
+  },
+  {
+   "description": "Official letter/reference number from HELB/UFB/CDF",
+   "fieldname": "request_reference",
+   "fieldtype": "Data",
+   "label": "External Request Reference"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fieldname": "section_cheque_cancellation",
+   "fieldtype": "Section Break",
+   "label": "Cheque & Donation Details"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "description": "Select the Donation record for the cheque to be cancelled",
+   "fieldname": "cheque_donation",
+   "fieldtype": "Link",
+   "label": "Donation (Cheque)",
+   "options": "Donation"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fetch_from": "cheque_donation.custom_cheque_id",
+   "fieldname": "cheque_id",
+   "fieldtype": "Data",
+   "label": "Cheque Number",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fetch_from": "cheque_donation.amount",
+   "fieldname": "cheque_donation_amount",
+   "fieldtype": "Currency",
+   "label": "Donation Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_cheque",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fetch_from": "cheque_donation.date",
+   "fieldname": "cheque_donation_date",
+   "fieldtype": "Date",
+   "label": "Donation Date",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && in_list(['HELB','CDF','Scholarship'], doc.request_type)",
+   "fetch_from": "cheque_donation.mode_of_payment",
+   "fieldname": "cheque_donation_mode",
+   "fieldtype": "Data",
+   "label": "Mode of Payment",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.cheque_donation",
+   "fieldname": "section_cancellation_allocations",
+   "fieldtype": "Section Break",
+   "label": "Linked Sponsorship Allocations"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Receipt Cancellation' && doc.cheque_donation",
+   "fieldname": "cancellation_allocations",
+   "fieldtype": "Table",
+   "label": "Sponsorship Allocations",
+   "options": "Student Refund Cancellation Allocation",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.action_type != 'Refund to Funder' || doc.refund_type == 'Refund Allocated Amount')",
+   "fieldname": "section_donation",
+   "fieldtype": "Section Break",
+   "label": "Sponsorship Allocation Details"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.action_type != 'Refund to Funder' || doc.refund_type == 'Refund Allocated Amount')",
+   "description": "Link to the original Sponsorship Allocation document",
+   "fieldname": "sponsorship_allocation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sponsorship Allocation",
+   "options": "Sponsorship Allocation",
+   "search_index": 1
+  },
+  {
+   "description": "Link to the cancelled Sponsorship Allocation document",
+   "fieldname": "cancelled_sponsorship_allocation",
+   "fieldtype": "Data",
+   "label": "Cancelled Sponsorship Allocation",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Total amount from the original Sponsorship Allocation",
+   "fieldname": "donation_amount",
+   "fieldtype": "Currency",
+   "label": "Original Donation Amount",
+   "read_only": 1
+  },
+  {
+   "description": "Total amount from the original Sponsorship Allocation",
+   "fieldname": "custom_cheque_id",
+   "fieldtype": "Data",
+   "label": "Cheque ID",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.action_type != 'Refund to Funder' || doc.refund_type == 'Refund Allocated Amount')",
+   "fetch_from": "sponsorship_allocation.date",
+   "fieldname": "sponsorship_allocation_date",
+   "fieldtype": "Date",
+   "label": "Sponsorship Allocation Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_donation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Total Allocated from the Sponsorship Allocation document",
+   "fieldname": "total_allocated_in_donation",
+   "fieldtype": "Currency",
+   "label": "Total Allocated in Sponsorship",
+   "read_only": 1
+  },
+  {
+   "description": "Total Allocated minus Sum of Amount to be refunded. This is what goes back to the Sponsor.",
+   "fieldname": "amount_refunded_to_donor",
+   "fieldtype": "Currency",
+   "label": "Amount Refunded to Donor",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Allocated Amount'",
+   "description": "Bank account to pay the refunded money to the sponsor/funder",
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "label": "Payment Bank Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.action_type != 'Refund to Funder' || doc.refund_type == 'Refund Allocated Amount')",
+   "fieldname": "section_beneficiaries",
+   "fieldtype": "Section Break",
+   "label": "Beneficiaries (Refund to Funder)"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && (doc.action_type != 'Refund to Funder' || doc.refund_type == 'Refund Allocated Amount')",
+   "description": "Loaded from Sponsorship Allocation. Enter new reallocation amount for each beneficiary.",
+   "fieldname": "beneficiaries",
+   "fieldtype": "Table",
+   "label": "Beneficiaries",
+   "options": "Student Refund Beneficiary"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Reallocate to Student'",
+   "fieldname": "section_reallocation",
+   "fieldtype": "Section Break",
+   "label": "Reallocation Details (Reallocate to Student)"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.sponsorship_allocation && doc.action_type == 'Reallocate to Student'",
+   "description": "Loaded from Sponsorship Allocation. Select target student and amount to reallocate from each source student.",
+   "fieldname": "reallocations",
+   "fieldtype": "Table",
+   "label": "Reallocations",
+   "options": "Student Refund Reallocation"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.cheque_donation && doc.action_type == 'Receipt Cancellation'",
+   "fieldname": "section_cancellation",
+   "fieldtype": "Section Break",
+   "label": "Cancellation Beneficiaries"
+  },
+  {
+   "depends_on": "eval:in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.cheque_donation && doc.action_type == 'Receipt Cancellation'",
+   "fieldname": "cancellation_beneficiaries",
+   "fieldtype": "Table",
+   "label": "Cancellation Beneficiaries",
+   "options": "Student Refund Cancellation Beneficiary",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "fieldname": "section_hostel_details",
+   "fieldtype": "Section Break",
+   "label": "Hostel Details"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "fieldname": "source_student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Customer"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "description": "e.g. 2025/2026 \u2014 filters invoice list",
+   "fieldname": "hostel_session",
+   "fieldtype": "Data",
+   "label": "Session Filter"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "description": "e.g. Semester 1 \u2014 filters invoice list",
+   "fieldname": "hostel_semester",
+   "fieldtype": "Data",
+   "label": "Semester Filter"
+  },
+  {
+   "fieldname": "col_break_hostel",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "description": "Hostel Officer narration on stay status, room condition, and days occupied",
+   "fieldname": "narration",
+   "fieldtype": "Small Text",
+   "label": "Narration"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "fieldname": "section_items",
+   "fieldtype": "Section Break",
+   "label": "Hostel Payment Items to Reverse"
+  },
+  {
+   "depends_on": "eval:doc.request_type == 'Hostel'",
+   "description": "Only used for Hostel reversals",
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Refund Items",
+   "options": "Student Refund Item"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Refund Amount",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "section_excess_allocation",
+   "fieldtype": "Section Break",
+   "label": "Excess Allocation Details"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Select the Sponsorship Allocation to return excess funds from",
+   "fieldname": "excess_sponsorship_allocation",
+   "fieldtype": "Link",
+   "label": "Sponsorship Allocation",
+   "options": "Sponsorship Allocation"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "excess_funder",
+   "fieldtype": "Link",
+   "label": "Sponsor (Donor)",
+   "options": "Donor",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "excess_funder_name",
+   "fieldtype": "Data",
+   "label": "Sponsor Name",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "col_break_excess_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Original donation amount on the Sponsorship Allocation",
+   "fieldname": "excess_total_donated",
+   "fieldtype": "Currency",
+   "label": "Total Donated Amount",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Amount not yet allocated to any student on this Sponsorship Allocation",
+   "fieldname": "excess_sa_balance",
+   "fieldtype": "Currency",
+   "label": "Unallocated Balance (SA)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "section_excess_accounts",
+   "fieldtype": "Section Break",
+   "label": "Account Details"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Select the bank/account to refund money from",
+   "fieldname": "excess_school_bank_account",
+   "fieldtype": "Link",
+   "label": "Account to Refund From",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Current balance in the school bank account",
+   "fieldname": "excess_school_bank_gl_balance",
+   "fieldtype": "Currency",
+   "label": "School Bank GL Balance",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "col_break_excess_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Sponsor liability GL account (from Donor record)",
+   "fieldname": "excess_sponsor_gl_account",
+   "fieldtype": "Link",
+   "label": "Sponsor GL Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Total already returned to sponsor via previous Refund Excess Allocation docs on this SA",
+   "fieldname": "excess_previously_returned",
+   "fieldtype": "Currency",
+   "label": "Previously Returned (this SA)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "section_excess_amount",
+   "fieldtype": "Section Break",
+   "label": "Amount to Return"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "min(School Bank GL Balance, SA Unallocated Balance minus Previously Returned)",
+   "fieldname": "excess_max_transferable",
+   "fieldtype": "Currency",
+   "label": "Maximum Transferable Amount",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Amount to transfer from school bank account back to sponsor",
+   "fieldname": "excess_amount_to_return",
+   "fieldtype": "Currency",
+   "label": "Amount to Return to Sponsor"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "col_break_excess_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "description": "Reason for returning excess allocation",
+   "fieldname": "excess_narration",
+   "fieldtype": "Small Text",
+   "label": "Narration / Reason"
+  },
+  {
+   "depends_on": "eval:doc.action_type == 'Refund to Funder' && doc.refund_type == 'Refund Unallocated Amount' && in_list(['HELB','CDF','Scholarship'], doc.request_type) && doc.funder",
+   "fieldname": "excess_return_je",
+   "fieldtype": "Link",
+   "label": "Return Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting Details"
+  },
+  {
+   "fieldname": "debit_account",
+   "fieldtype": "Link",
+   "label": "Debit Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credit_account",
+   "fieldtype": "Link",
+   "label": "Credit Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "disbursement_journal_entry",
+   "fieldtype": "Link",
+   "label": "Disbursement Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sponsorship_reversal_je",
+   "fieldtype": "Link",
+   "label": "Sponsorship Reversal Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reallocation_je",
+   "fieldtype": "Link",
+   "label": "Reallocation Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_narrations",
+   "fieldtype": "Section Break",
+   "label": "Remarks"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Registrar",
+   "fieldname": "registrar_narration",
+   "fieldtype": "Small Text",
+   "label": "Registrar Remark",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Student Finance Accountant",
+   "fieldname": "accountant_narration",
+   "fieldtype": "Small Text",
+   "label": "Accountant Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_narration_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Finance Officer",
+   "fieldname": "finance_officer_narration",
+   "fieldtype": "Small Text",
+   "label": "Finance Officer Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_narrations_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Internal Auditor",
+   "fieldname": "internal_auditor_narration",
+   "fieldtype": "Small Text",
+   "label": "Internal Auditor Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_narration_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Payable Accountant",
+   "fieldname": "payable_accountant_narration",
+   "fieldtype": "Small Text",
+   "label": "Payable Accountant Remark",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by Senior Accountant Students Finance",
+   "fieldname": "senior_accountant_narration",
+   "fieldtype": "Small Text",
+   "label": "Senior Accountant Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_narrations_3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Remark by DVC Finance",
+   "fieldname": "dvc_narration",
+   "fieldtype": "Small Text",
+   "label": "DVC Finance Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_narration_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_remarks_trail",
+   "fieldtype": "Section Break",
+   "label": "Remarks Trail"
+  },
+  {
+   "depends_on": "eval:!doc.remarks_trail",
+   "fieldname": "remarks_trail_placeholder",
+   "fieldtype": "HTML",
+   "options": "<p style=\"color:#999; font-style:italic;\">No remarks recorded yet. Trail will appear here after the first workflow action with a remark.</p>"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "remarks_trail",
+   "fieldtype": "Small Text",
+   "label": "Conversation Trail",
+   "read_only": 1
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Workflow State",
+   "options": "Workflow State",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Student Refund",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-12 16:39:23.577366",
+ "modified_by": "Administrator",
+ "module": "Erp Mmust",
+ "name": "Student Refund",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "create": 1,
+   "read": 1,
+   "role": "Student Finance Accountant",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Finance Officer",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "DVC Finance",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Internal Auditor",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Payable Accountant",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Registrar",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Accountant Students Finance",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "request_type,workflow_state",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "request_type",
+ "track_changes": 1
 }

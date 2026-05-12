@@ -86,6 +86,27 @@ frappe.ui.form.on('Student Refund', {
                 }
             };
         });
+
+        // Account to Refund From — filter to bank/cash accounts
+        frm.set_query('excess_school_bank_account', function () {
+            return {
+                filters: {
+                    account_type: ['in', ['Bank', 'Cash']],
+                    is_group: 0,
+                    company: frappe.defaults.get_user_default('company')
+                }
+            };
+        });
+
+        // Excess Allocation — only show submitted SAs
+        frm.set_query('excess_sponsorship_allocation', function () {
+            return {
+                filters: {
+                    docstatus: 1,
+                    donor: frm.doc.funder || undefined
+                }
+            };
+        });
     },
 
     source_student: function (frm) {
@@ -316,6 +337,7 @@ frappe.ui.form.on('Student Refund', {
         frm.remove_custom_button('Print Cheque');
         frm.remove_custom_button('Print Receipt Cancellation');
         frm.remove_custom_button('Print Reallocation Receipt');
+        frm.remove_custom_button('Print Refund Unallocated');
 
         if (frm.doc.docstatus !== 1) return;
 
@@ -323,10 +345,12 @@ frappe.ui.form.on('Student Refund', {
             'refund_print_format',
             'receipt_cancellation_print_format',
             'reallocation_print_format',
-            'graduation_refund_print_format'
+            'graduation_refund_print_format',
+            'refund_unallocated_print_format'
         ], function (settings) {
 
             if (frm.doc.action_type === 'Refund to Funder' &&
+                frm.doc.refund_type === 'Refund Allocated Amount' &&
                 frm.doc.workflow_state === 'Closed') {
 
                 const format = settings.refund_print_format || 'Sponsorship Cheque Print Format';
@@ -334,6 +358,19 @@ frappe.ui.form.on('Student Refund', {
                     const url = `/printview?doctype=${encodeURIComponent('Student Refund')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
                     window.open(url, '_blank');
                 }, __('Actions'));
+            }
+
+            if (frm.doc.action_type === 'Refund to Funder' &&
+                frm.doc.refund_type === 'Refund Unallocated Amount' &&
+                frm.doc.workflow_state === 'Closed') {
+
+                const format = settings.refund_unallocated_print_format;
+                if (format) {
+                    frm.add_custom_button(__('Print Refund Unallocated'), function () {
+                        const url = `/printview?doctype=${encodeURIComponent('Student Refund')}&name=${encodeURIComponent(frm.doc.name)}&format=${encodeURIComponent(format)}&no_letterhead=0`;
+                        window.open(url, '_blank');
+                    });
+                }
             }
 
             if (frm.doc.action_type === 'Receipt Cancellation' &&
@@ -790,6 +827,168 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('graduate_bank_name', is_graduation_refund);
         frm.toggle_display('graduate_account_number', is_graduation_refund);
         frm.toggle_display('graduation_swift_code', is_graduation_refund);
+    },
+
+    // ─── REFUND EXCESS ALLOCATION ─────────────────────────────────────────────
+
+    refund_type: function (frm) {
+        // Clear excess fields when refund_type changes
+        if (frm.doc.refund_type !== 'Refund Unallocated Amount') {
+            const clear_fields = [
+                'excess_sponsorship_allocation',
+                'excess_funder', 'excess_funder_name',
+                'excess_total_donated', 'excess_sa_balance',
+                'excess_school_bank_account', 'excess_school_bank_gl_balance',
+                'excess_sponsor_gl_account', 'excess_previously_returned',
+                'excess_max_transferable', 'excess_amount_to_return',
+                'excess_narration'
+            ];
+            clear_fields.forEach(f => frm.set_value(f, null));
+        }
+        frm.trigger('toggle_fields');
+    },
+
+    excess_sponsorship_allocation: function (frm) {
+        const sa = frm.doc.excess_sponsorship_allocation;
+
+        // Clear all fetched fields first
+        const clear_fields = [
+            'excess_funder', 'excess_funder_name',
+            'excess_total_donated', 'excess_sa_balance',
+            'excess_school_bank_account', 'excess_school_bank_gl_balance',
+            'excess_sponsor_gl_account', 'excess_previously_returned',
+            'excess_max_transferable', 'excess_amount_to_return'
+        ];
+        clear_fields.forEach(f => frm.set_value(f, null));
+
+        // Also clear request_reference if it was previously set by this handler
+        if (!sa) {
+            frm.set_value('request_reference', null);
+            return;
+        }
+
+        frappe.call({
+            method: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_excess_allocation_data',
+            args: {
+                sa_name: sa,
+                current_doc: frm.doc.name || ''
+            },
+            freeze: true,
+            freeze_message: __('Fetching allocation details...'),
+            callback: function (r) {
+                if (!r.message) return;
+                const d = r.message;
+
+                frm.set_value('excess_funder', d.donor);
+                frm.set_value('excess_funder_name', d.donor_name);
+                frm.set_value('excess_total_donated', d.total_donated);
+                frm.set_value('excess_sa_balance', d.sa_balance);
+                // excess_school_bank_account is user-selected — do not auto-populate
+                frm.set_value('excess_school_bank_gl_balance', null);
+                frm.set_value('excess_sponsor_gl_account', d.sponsor_gl_account);
+                frm.set_value('excess_previously_returned', d.previously_returned);
+                frm.set_value('excess_max_transferable', d.max_transferable);
+
+                // Populate External Request Reference if available on the Donation
+                if (d.external_request_reference) {
+                    frm.set_value('request_reference', d.external_request_reference);
+                }
+
+                // Helpful inline message
+                if (d.max_transferable <= 0) {
+                    frappe.msgprint({
+                        title: __('No Returnable Balance'),
+                        indicator: 'orange',
+                        message: __(
+                            'This Sponsorship Allocation has no balance available to return. ' +
+                            'SA Unallocated Balance: <b>{0}</b> | Already Returned: <b>{1}</b> | ' +
+                            'School Bank GL Balance: <b>{2}</b>',
+                            [
+                                format_currency(d.sa_balance),
+                                format_currency(d.previously_returned),
+                                format_currency(d.school_bank_gl_balance)
+                            ]
+                        )
+                    });
+                } else {
+                    frappe.show_alert({
+                        message: __(
+                            'Maximum returnable amount: <b>{0}</b>',
+                            [format_currency(d.max_transferable)]
+                        ),
+                        indicator: 'blue'
+                    }, 6);
+                }
+            },
+            error: function () {
+                // Reset on error so user knows fetch failed
+                clear_fields.forEach(f => frm.set_value(f, null));
+            }
+        });
+    },
+
+    excess_school_bank_account: function (frm) {
+        const account = frm.doc.excess_school_bank_account;
+
+        frm.set_value('excess_school_bank_gl_balance', null);
+        frm.set_value('excess_max_transferable', null);
+
+        if (!account) return;
+
+        // Use direct SQL via whitelisted method
+        frappe.call({
+            method: 'erp_mmust.erp_mmust.doctype.student_refund.student_refund.get_account_gl_balance',
+            args: { account: account },
+            callback: function (r) {
+                if (r.message === undefined || r.message === null) return;
+
+                const gl_balance = r.message;
+                frm.set_value('excess_school_bank_gl_balance', gl_balance);
+
+                // Recalculate max transferable
+                const net_returnable = flt(frm.doc.excess_sa_balance) - flt(frm.doc.excess_previously_returned);
+                const max_transferable = Math.min(gl_balance, net_returnable);
+                frm.set_value('excess_max_transferable', max_transferable);
+
+                if (max_transferable <= 0) {
+                    frappe.show_alert({
+                        message: __('No transferable balance available from this account.'),
+                        indicator: 'orange'
+                    }, 5);
+                } else {
+                    frappe.show_alert({
+                        message: __('Maximum transferable: <b>{0}</b>', [format_currency(max_transferable)]),
+                        indicator: 'blue'
+                    }, 5);
+                }
+            }
+        });
+    },
+
+    excess_amount_to_return: function (frm) {
+        const amount = flt(frm.doc.excess_amount_to_return);
+        const max = flt(frm.doc.excess_max_transferable);
+
+        if (!frm.doc.excess_sponsorship_allocation) return;
+
+        if (amount > max && max > 0) {
+            frappe.msgprint({
+                title: __('Amount Exceeds Limit'),
+                indicator: 'red',
+                message: __(
+                    'Amount to Return (<b>{0}</b>) cannot exceed the Maximum Transferable Amount (<b>{1}</b>).<br><br>' +
+                    'School Bank GL Balance: <b>{2}</b><br>' +
+                    'Net SA Returnable Balance: <b>{3}</b>',
+                    [
+                        format_currency(amount),
+                        format_currency(max),
+                        format_currency(frm.doc.excess_school_bank_gl_balance),
+                        format_currency(flt(frm.doc.excess_sa_balance) - flt(frm.doc.excess_previously_returned))
+                    ]
+                )
+            });
+            frm.set_value('excess_amount_to_return', max);
+        }
     }
 
 });
