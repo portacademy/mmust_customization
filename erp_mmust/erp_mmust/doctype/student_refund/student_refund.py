@@ -4,524 +4,556 @@ from frappe.model.document import Document
 
 
 class StudentRefund(Document):
+	def before_save(self):
+		self.capture_remark_trail()
+		self.clear_narration_fields()
 
-    def before_save(self):
-        self.capture_remark_trail()
-        self.clear_narration_fields()
+	def validate_graduation_refund_amount(self):
+		if self.request_type != "Graduation" or self.action_type != "Refund a Student":
+			return
 
+		if not self.graduation_amount_to_refund or self.graduation_amount_to_refund <= 0:
+			frappe.throw("Please enter the Amount to Refund before forwarding.", title="Amount Required")
 
-    def validate_graduation_refund_amount(self):
-        if self.request_type != 'Graduation' or self.action_type != 'Refund a Student':
-            return
-        
-        if not self.graduation_amount_to_refund or self.graduation_amount_to_refund <= 0:
-            frappe.throw(
-                "Please enter the Amount to Refund before forwarding.",
-                title="Amount Required"
-            )
-        
-        if not self.graduation_bank_account:
-            frappe.throw(
-                "Please select the Bank to Refund before forwarding.",
-                title="Bank Account Required"
-            )
+		if not self.graduation_bank_account:
+			frappe.throw("Please select the Bank to Refund before forwarding.", title="Bank Account Required")
 
-        if self.graduation_ledger_balance >= 0:
-            frappe.throw("Student does not have a credit balance. Cannot process refund.")
+		if self.graduation_ledger_balance >= 0:
+			frappe.throw("Student does not have a credit balance. Cannot process refund.")
 
-        credit_balance = abs(self.graduation_ledger_balance)
-        if self.graduation_amount_to_refund > credit_balance:
-            frappe.throw(
-                f"Amount to Refund ({frappe.format_value(self.graduation_amount_to_refund, 'Currency')}) "
-                f"cannot exceed the student's credit balance "
-                f"({frappe.format_value(credit_balance, 'Currency')})."
-            )
+		credit_balance = abs(self.graduation_ledger_balance)
+		if self.graduation_amount_to_refund > credit_balance:
+			frappe.throw(
+				f"Amount to Refund ({frappe.format_value(self.graduation_amount_to_refund, 'Currency')}) "
+				f"cannot exceed the student's credit balance "
+				f"({frappe.format_value(credit_balance, 'Currency')})."
+			)
 
-    def before_submit(self):
-        self.capture_remark_trail()
-        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
-            if not self.graduation_student:
-                frappe.throw(
-                    "Please select a Student before submitting.",
-                    title="Student Required"
-                )
+	def before_submit(self):
+		self.capture_remark_trail()
+		if self.request_type == "Graduation" and self.action_type == "Refund a Student":
+			if not self.graduation_student:
+				frappe.throw("Please select a Student before submitting.", title="Student Required")
 
-    def after_insert(self):
-        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
-            frappe.db.set_value('Student Refund', self.name, 'workflow_state', 'Graduation Refund Draft')
-            frappe.db.commit()
+	def after_insert(self):
+		if self.request_type == "Graduation" and self.action_type == "Refund a Student":
+			frappe.db.set_value("Student Refund", self.name, "workflow_state", "Graduation Refund Draft")
+			frappe.db.commit()
 
-    def validate(self):
-        self.calculate_total()
-        if self.docstatus == 1:
-            return
-        self.validate_mandatory_fields()
-        
-        if self.action_type == "Refund to Funder" and self.refund_type == "Refund Allocated Amount":
-            self.validate_beneficiaries()
-            self.calculate_amount_refunded_to_donor()
-        elif self.action_type == "Refund to Funder" and self.refund_type == "Refund Unallocated Amount":
-            self.validate_excess_allocation()
-        elif self.action_type == "Reallocate to Student":
-            self.validate_reallocations()
-            self.calculate_reallocation_total()
-        elif self.request_type == "Hostel":
-            self.validate_hostel_items()
-        elif self.action_type == 'Refund a Student' and self.request_type == 'Graduation':
-            self.validate_graduation_refund()
+	def validate(self):
+		self.calculate_total()
+		if self.docstatus == 1:
+			return
+		self.validate_mandatory_fields()
 
-    def on_workflow_action(self, action):
-        if action == 'Forward Processed Voucher to FO':
-            self.validate_graduation_refund_amount()
+		if self.action_type == "Refund to Funder" and self.refund_type == "Refund Allocated Amount":
+			self.validate_beneficiaries()
+			self.calculate_amount_refunded_to_donor()
+		elif self.action_type == "Refund to Funder" and self.refund_type == "Refund Unallocated Amount":
+			self.validate_excess_allocation()
+		elif self.action_type == "Reallocate to Student":
+			self.validate_reallocations()
+			self.calculate_reallocation_total()
+		elif self.request_type == "Hostel":
+			self.validate_hostel_items()
+		elif self.action_type == "Refund a Student" and self.request_type == "Graduation":
+			self.validate_graduation_refund()
 
-    
-    def capture_remark_trail(self):
-        remark_fields = [
-            ("registrar_narration", "Registrar"),
-            ("senior_accountant_narration", "Senior Accountant Students Finance"),
-            ("accountant_narration", "Student Finance Accountant"),
-            ("finance_officer_narration", "Finance Officer"),
-            ("internal_auditor_narration", "Internal Auditor"),
-            ("payable_accountant_narration", "Payable Accountant"),
-            ("dvc_narration", "DVC Finance"),
-            # ("accounts_manager_narration", "Accounts Manager"),
-        ]
+	# def on_workflow_action(self, action):
+	# 	if action == "Forward Processed Voucher to FO":
+	# 		self.validate_graduation_refund_amount()
 
-        # Load the saved (old) version from DB to compare
-        if self.is_new():
-            old_doc = None
-        else:
-            try:
-                old_doc = frappe.get_doc(self.doctype, self.name)
-            except Exception:
-                old_doc = None
+	# 	if (
+	# 		self.request_type in ("HELB", "CDF", "Scholarship")
+	# 		and self.action_type == "Refund to Funder"
+	# 		and self.refund_type == "Refund Unallocated Amount"
+	# 		and self.workflow_state == "Pending PV"
+	# 	):
+	# 		if not self.excess_school_bank_account:
+	# 			frappe.throw(
+	# 				"Please select the Account to Refund From before forwarding from Pending PV.",
+	# 				title="Missing Account",
+	# 			)
 
-        new_entries = []
+	# 	self.validate_excess_allocation()
 
-        for fieldname, role_label in remark_fields:
-            new_value = (self.get(fieldname) or "").strip()
-            old_value = (old_doc.get(fieldname) or "").strip() if old_doc else ""
+	def on_workflow_action(self, action):
+		if action == "Forward Processed Voucher to FO":
+			self.validate_graduation_refund_amount()
 
-            if new_value and new_value != old_value:
-                timestamp = now_datetime().strftime("%d %b %Y %H:%M")
-                user = get_fullname(frappe.session.user)
-                state = self.workflow_state or ""
-                entry = f"[{timestamp}] {user} ({role_label}) [{state}]:\n{new_value}"
-                new_entries.append(entry)
+		current_state = frappe.db.get_value(self.doctype, self.name, "workflow_state")
 
-        if new_entries:
-            existing = (self.remarks_trail or "").strip()
-            separator = "\n\n" + "─" * 60 + "\n\n"
-            appended = separator.join(new_entries)
-            self.remarks_trail = (existing + separator + appended).strip() if existing else appended.strip()
+		if (
+			self.request_type in ("HELB", "CDF", "Scholarship")
+			and self.action_type == "Refund to Funder"
+			and self.refund_type == "Refund Unallocated Amount"
+			and current_state == "Pending PV"
+		):
+			if not self.excess_school_bank_account:
+				frappe.throw(
+					"Please select the Account to Refund From before forwarding from Pending PV.",
+					title="Missing Account",
+				)
 
+			self.validate_excess_allocation()
 
-    def calculate_total(self):
-        if self.request_type == "Hostel":
-            self.total_amount = sum(flt(row.refundable_amount) for row in (self.items or []))
+	def capture_remark_trail(self):
+		remark_fields = [
+			("registrar_narration", "Registrar"),
+			("senior_accountant_narration", "Senior Accountant Students Finance"),
+			("accountant_narration", "Student Finance Accountant"),
+			("finance_officer_narration", "Finance Officer"),
+			("internal_auditor_narration", "Internal Auditor"),
+			("payable_accountant_narration", "Payable Accountant"),
+			("dvc_narration", "DVC Finance"),
+			# ("accounts_manager_narration", "Accounts Manager"),
+		]
 
-    # def validate_mandatory_fields(self):
+		# Load the saved (old) version from DB to compare
+		if self.is_new():
+			old_doc = None
+		else:
+			try:
+				old_doc = frappe.get_doc(self.doctype, self.name)
+			except Exception:
+				old_doc = None
 
-    #     if self.request_type in ('HELB', 'CDF', 'Scholarship'):
-    #         if not self.sponsorship_allocation:
-    #             frappe.throw(
-    #                 "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
-    #                 title="Missing Field"
-    #             )
+		new_entries = []
 
-    #     if self.action_type == 'Refund to Funder' and \
-    #        self.request_type in ('HELB', 'CDF', 'Scholarship'):
-    #         if not self.bank_account:
-    #             frappe.throw(
-    #                 "Payment Bank Account is required for Refund to Funder.",
-    #                 title="Missing Field"
-    #             )
+		for fieldname, role_label in remark_fields:
+			new_value = (self.get(fieldname) or "").strip()
+			old_value = (old_doc.get(fieldname) or "").strip() if old_doc else ""
 
-    def validate_mandatory_fields(self):
-        if self.request_type in ('HELB', 'CDF', 'Scholarship'):
-            if self.action_type == 'Receipt Cancellation':
-                # Receipt Cancellation uses cheque_donation instead
-                if not self.cheque_donation:
-                    frappe.throw(
-                        "Donation (Cheque) is required for Receipt Cancellation.",
-                        title="Missing Field"
-                    )
-            elif self.refund_type != 'Refund Unallocated Amount':
-                # Refund Unallocated Amount uses excess_sponsorship_allocation instead
-                if not self.sponsorship_allocation:
-                    frappe.throw(
-                        "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
-                        title="Missing Field"
-                    )
+			if new_value and new_value != old_value:
+				timestamp = now_datetime().strftime("%d %b %Y %H:%M")
+				user = get_fullname(frappe.session.user)
+				state = self.workflow_state or ""
+				entry = f"[{timestamp}] {user} ({role_label}) [{state}]:\n{new_value}"
+				new_entries.append(entry)
 
-        if self.action_type == 'Refund to Funder' and \
-        self.request_type in ('HELB', 'CDF', 'Scholarship') and \
-        self.refund_type == 'Refund Allocated Amount':
-            if not self.bank_account:
-                frappe.throw(
-                    "Payment Bank Account is required for Refund to Funder.",
-                    title="Missing Field"
-                )
-        
-        if self.request_type == 'Graduation' and self.action_type == 'Refund a Student':
-            if not self.graduation_student:
-                frappe.throw("Student is required for Graduation Refund.", title="Missing Field")
+		if new_entries:
+			existing = (self.remarks_trail or "").strip()
+			separator = "\n\n" + "─" * 60 + "\n\n"
+			appended = separator.join(new_entries)
+			self.remarks_trail = (existing + separator + appended).strip() if existing else appended.strip()
 
-        if self.action_type == 'Refund to Funder' and self.request_type in ('HELB', 'CDF', 'Scholarship'):
-            if not self.refund_type:
-                frappe.throw("Refund Type is required when Action Type is Refund to Funder.", title="Missing Field")
+	def calculate_total(self):
+		if self.request_type == "Hostel":
+			self.total_amount = sum(flt(row.refundable_amount) for row in (self.items or []))
 
-        if self.action_type == 'Refund to Funder' and self.refund_type == 'Refund Unallocated Amount':
-            if not self.excess_sponsorship_allocation:
-                frappe.throw("Sponsorship Allocation is required for Refund Unallocated Amount.", title="Missing Field")
-            if not self.excess_amount_to_return or flt(self.excess_amount_to_return) <= 0:
-                frappe.throw("Amount to Return must be greater than zero.", title="Missing Field")
+	# def validate_mandatory_fields(self):
 
-    # ─── REFUND TO FUNDER VALIDATIONS ────────────────────────────────────────
+	#     if self.request_type in ('HELB', 'CDF', 'Scholarship'):
+	#         if not self.sponsorship_allocation:
+	#             frappe.throw(
+	#                 "Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
+	#                 title="Missing Field"
+	#             )
 
-    def validate_beneficiaries(self):
-        if self.request_type not in ("HELB", "CDF", "Scholarship"):
-            return
-        if not self.beneficiaries:
-            return
-        
-        has_any_refund = any(flt(row.amount_to_be_refunded) > 0 for row in self.beneficiaries)
-        if not has_any_refund:
-            frappe.throw(
-                "At least one beneficiary must have an Amount to be Refunded greater than zero.",
-                title="Missing Refund Amount"
-            )
+	#     if self.action_type == 'Refund to Funder' and \
+	#        self.request_type in ('HELB', 'CDF', 'Scholarship'):
+	#         if not self.bank_account:
+	#             frappe.throw(
+	#                 "Payment Bank Account is required for Refund to Funder.",
+	#                 title="Missing Field"
+	#             )
 
-        total_to_refund = 0
+	def validate_mandatory_fields(self):
+		if self.request_type in ("HELB", "CDF", "Scholarship"):
+			if self.action_type == "Receipt Cancellation":
+				# Receipt Cancellation uses cheque_donation instead
+				if not self.cheque_donation:
+					frappe.throw(
+						"Donation (Cheque) is required for Receipt Cancellation.", title="Missing Field"
+					)
+			elif self.refund_type != "Refund Unallocated Amount":
+				# Refund Unallocated Amount uses excess_sponsorship_allocation instead
+				if not self.sponsorship_allocation:
+					frappe.throw(
+						"Sponsorship Allocation is required for HELB, CDF, and Scholarship requests.",
+						title="Missing Field",
+					)
 
-        for row in self.beneficiaries:
-            original  = flt(row.original_allocated_amount)
-            to_refund = flt(row.amount_to_be_refunded)
+		if (
+			self.action_type == "Refund to Funder"
+			and self.request_type in ("HELB", "CDF", "Scholarship")
+			and self.refund_type == "Refund Allocated Amount"
+		):
+			if not self.bank_account:
+				frappe.throw("Payment Bank Account is required for Refund to Funder.", title="Missing Field")
 
-            if to_refund <= 0:
-                continue
+		if self.request_type == "Graduation" and self.action_type == "Refund a Student":
+			if not self.graduation_student:
+				frappe.throw("Student is required for Graduation Refund.", title="Missing Field")
 
-            gl_balance = self._get_student_gl_balance(row.student)
+		if self.action_type == "Refund to Funder" and self.request_type in ("HELB", "CDF", "Scholarship"):
+			if not self.refund_type:
+				frappe.throw(
+					"Refund Type is required when Action Type is Refund to Funder.", title="Missing Field"
+				)
 
-            if gl_balance > 0:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"This student has an outstanding debit balance of "
-                    f"<b>₦{gl_balance:,.2f}</b> (they owe money). "
-                    f"A refund cannot be processed for students with an outstanding balance."
-                )
+		if self.action_type == "Refund to Funder" and self.refund_type == "Refund Unallocated Amount":
+			if not self.excess_sponsorship_allocation:
+				frappe.throw(
+					"Sponsorship Allocation is required for Refund Unallocated Amount.", title="Missing Field"
+				)
+			if not self.excess_amount_to_return or flt(self.excess_amount_to_return) <= 0:
+				frappe.throw("Amount to Return must be greater than zero.", title="Missing Field")
 
-            credit_balance = abs(gl_balance) if gl_balance < 0 else 0
+	# ─── REFUND TO FUNDER VALIDATIONS ────────────────────────────────────────
 
-            if to_refund > original:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Amount to be Refunded (<b>₦{to_refund:,.2f}</b>) cannot exceed "
-                    f"Original Allocated Amount (<b>₦{original:,.2f}</b>)."
-                )
+	def validate_beneficiaries(self):
+		if self.request_type not in ("HELB", "CDF", "Scholarship"):
+			return
+		if not self.beneficiaries:
+			return
 
-            if to_refund > credit_balance:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Amount to be Refunded (<b>₦{to_refund:,.2f}</b>) cannot exceed "
-                    f"the student's available credit balance in the ledger "
-                    f"(<b>₦{credit_balance:,.2f}</b>)."
-                )
+		has_any_refund = any(flt(row.amount_to_be_refunded) > 0 for row in self.beneficiaries)
+		if not has_any_refund:
+			frappe.throw(
+				"At least one beneficiary must have an Amount to be Refunded greater than zero.",
+				title="Missing Refund Amount",
+			)
 
-            total_to_refund += to_refund
+		total_to_refund = 0
 
-        total_allocated = flt(self.total_allocated_in_donation)
-        if total_to_refund > total_allocated + 0.01:
-            frappe.throw(
-                f"Sum of Amounts to be Refunded (<b>₦{total_to_refund:,.2f}</b>) "
-                f"cannot exceed Total Allocated in Sponsorship Allocation "
-                f"(<b>₦{total_allocated:,.2f}</b>)."
-            )
+		for row in self.beneficiaries:
+			original = flt(row.original_allocated_amount)
+			to_refund = flt(row.amount_to_be_refunded)
 
-    def calculate_amount_refunded_to_donor(self):
-        if self.request_type not in ("HELB", "CDF", "Scholarship"):
-            return
-        total_to_refund = sum(
-            flt(row.amount_to_be_refunded) for row in (self.beneficiaries or [])
-        )
-        self.amount_refunded_to_donor = total_to_refund
-        self.total_amount = total_to_refund
+			if to_refund <= 0:
+				continue
 
-    # ─── REALLOCATE TO STUDENT VALIDATIONS ───────────────────────────────────
+			gl_balance = self._get_student_gl_balance(row.student)
 
-    def validate_reallocations(self):
-        if self.request_type not in ("HELB", "CDF", "Scholarship"):
-            return
-        if not self.reallocations:
-            return
-        
-        has_any_reallocation = any(flt(row.amount_to_reallocate) > 0 for row in self.reallocations)
-        if not has_any_reallocation:
-            frappe.throw(
-                "At least one row must have an Amount to Reallocate greater than zero.",
-                title="Missing Reallocation Amount"
-            )
+			if gl_balance > 0:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"This student has an outstanding debit balance of "
+					f"<b>₦{gl_balance:,.2f}</b> (they owe money). "
+					f"A refund cannot be processed for students with an outstanding balance."
+				)
 
-        total_to_reallocate = 0
+			credit_balance = abs(gl_balance) if gl_balance < 0 else 0
 
-        for row in self.reallocations:
-            original      = flt(row.original_allocated_amount)
-            to_reallocate = flt(row.amount_to_reallocate)
+			if to_refund > original:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Amount to be Refunded (<b>₦{to_refund:,.2f}</b>) cannot exceed "
+					f"Original Allocated Amount (<b>₦{original:,.2f}</b>)."
+				)
 
-            if to_reallocate <= 0:
-                continue
+			if to_refund > credit_balance:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Amount to be Refunded (<b>₦{to_refund:,.2f}</b>) cannot exceed "
+					f"the student's available credit balance in the ledger "
+					f"(<b>₦{credit_balance:,.2f}</b>)."
+				)
 
-            if not row.target_student:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Target Student is required when Amount to Reallocate is greater than zero."
-                )
+			total_to_refund += to_refund
 
-            # Prevent reallocating to self
-            if row.target_student == row.source_student:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Target Student cannot be the same as Source Student."
-                )
+		total_allocated = flt(self.total_allocated_in_donation)
+		if total_to_refund > total_allocated + 0.01:
+			frappe.throw(
+				f"Sum of Amounts to be Refunded (<b>₦{total_to_refund:,.2f}</b>) "
+				f"cannot exceed Total Allocated in Sponsorship Allocation "
+				f"(<b>₦{total_allocated:,.2f}</b>)."
+			)
 
-            # Get source student GL balance
-            gl_balance = self._get_student_gl_balance(row.source_student)
+	def calculate_amount_refunded_to_donor(self):
+		if self.request_type not in ("HELB", "CDF", "Scholarship"):
+			return
+		total_to_refund = sum(flt(row.amount_to_be_refunded) for row in (self.beneficiaries or []))
+		self.amount_refunded_to_donor = total_to_refund
+		self.total_amount = total_to_refund
 
-            if gl_balance > 0:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"This student has an outstanding debit balance of "
-                    f"<b>₦{gl_balance:,.2f}</b> (they owe money). "
-                    f"A reallocation cannot be processed for students with an outstanding balance."
-                )
+	# ─── REALLOCATE TO STUDENT VALIDATIONS ───────────────────────────────────
 
-            credit_balance = abs(gl_balance) if gl_balance < 0 else 0
+	def validate_reallocations(self):
+		if self.request_type not in ("HELB", "CDF", "Scholarship"):
+			return
+		if not self.reallocations:
+			return
 
-            if to_reallocate > original:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Amount to Reallocate (<b>₦{to_reallocate:,.2f}</b>) cannot exceed "
-                    f"Original Allocated Amount (<b>₦{original:,.2f}</b>)."
-                )
+		has_any_reallocation = any(flt(row.amount_to_reallocate) > 0 for row in self.reallocations)
+		if not has_any_reallocation:
+			frappe.throw(
+				"At least one row must have an Amount to Reallocate greater than zero.",
+				title="Missing Reallocation Amount",
+			)
 
-            if to_reallocate > credit_balance:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.student_name}</b>: "
-                    f"Amount to Reallocate (<b>₦{to_reallocate:,.2f}</b>) cannot exceed "
-                    f"the student's available credit balance in the ledger "
-                    f"(<b>₦{credit_balance:,.2f}</b>)."
-                )
+		total_to_reallocate = 0
 
-            total_to_reallocate += to_reallocate
+		for row in self.reallocations:
+			original = flt(row.original_allocated_amount)
+			to_reallocate = flt(row.amount_to_reallocate)
 
-        total_allocated = flt(self.total_allocated_in_donation)
-        if total_to_reallocate > total_allocated + 0.01:
-            frappe.throw(
-                f"Sum of Amounts to Reallocate (<b>₦{total_to_reallocate:,.2f}</b>) "
-                f"cannot exceed Total Allocated in Sponsorship Allocation "
-                f"(<b>₦{total_allocated:,.2f}</b>)."
-            )
+			if to_reallocate <= 0:
+				continue
 
-    def calculate_reallocation_total(self):
-        if self.request_type not in ("HELB", "CDF", "Scholarship"):
-            return
-        total_to_reallocate = sum(
-            flt(row.amount_to_reallocate) for row in (self.reallocations or [])
-        )
-        self.total_amount = total_to_reallocate
+			if not row.target_student:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Target Student is required when Amount to Reallocate is greater than zero."
+				)
 
-    # ─── HELPER METHODS ───────────────────────────────────────────────────────
+			# Prevent reallocating to self
+			if row.target_student == row.source_student:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Target Student cannot be the same as Source Student."
+				)
 
-    def _get_student_gl_balance(self, customer):
-        """
-        Returns the net GL balance for a student (Customer).
-        Positive = debit balance (student owes money).
-        Negative = credit balance (student has overpaid / has funds available).
-        Zero     = balanced.
-        """
-        result = frappe.db.sql("""
+			# Get source student GL balance
+			gl_balance = self._get_student_gl_balance(row.source_student)
+
+			if gl_balance > 0:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"This student has an outstanding debit balance of "
+					f"<b>₦{gl_balance:,.2f}</b> (they owe money). "
+					f"A reallocation cannot be processed for students with an outstanding balance."
+				)
+
+			credit_balance = abs(gl_balance) if gl_balance < 0 else 0
+
+			if to_reallocate > original:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Amount to Reallocate (<b>₦{to_reallocate:,.2f}</b>) cannot exceed "
+					f"Original Allocated Amount (<b>₦{original:,.2f}</b>)."
+				)
+
+			if to_reallocate > credit_balance:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.student_name}</b>: "
+					f"Amount to Reallocate (<b>₦{to_reallocate:,.2f}</b>) cannot exceed "
+					f"the student's available credit balance in the ledger "
+					f"(<b>₦{credit_balance:,.2f}</b>)."
+				)
+
+			total_to_reallocate += to_reallocate
+
+		total_allocated = flt(self.total_allocated_in_donation)
+		if total_to_reallocate > total_allocated + 0.01:
+			frappe.throw(
+				f"Sum of Amounts to Reallocate (<b>₦{total_to_reallocate:,.2f}</b>) "
+				f"cannot exceed Total Allocated in Sponsorship Allocation "
+				f"(<b>₦{total_allocated:,.2f}</b>)."
+			)
+
+	def calculate_reallocation_total(self):
+		if self.request_type not in ("HELB", "CDF", "Scholarship"):
+			return
+		total_to_reallocate = sum(flt(row.amount_to_reallocate) for row in (self.reallocations or []))
+		self.total_amount = total_to_reallocate
+
+	# ─── HELPER METHODS ───────────────────────────────────────────────────────
+
+	def _get_student_gl_balance(self, customer):
+		"""
+		Returns the net GL balance for a student (Customer).
+		Positive = debit balance (student owes money).
+		Negative = credit balance (student has overpaid / has funds available).
+		Zero     = balanced.
+		"""
+		result = frappe.db.sql(
+			"""
             SELECT COALESCE(SUM(debit - credit), 0)
             FROM `tabGL Entry`
             WHERE party_type = 'Customer'
               AND party = %s
               AND is_cancelled = 0
-        """, (customer,))
-        return flt(result[0][0]) if result else 0.0
+        """,
+			(customer,),
+		)
+		return flt(result[0][0]) if result else 0.0
 
-    # def on_cancel(self):
-    #     if self.journal_entry:
-    #         je = frappe.get_doc("Journal Entry", self.journal_entry)
-    #         if je.docstatus == 1:
-    #             je.cancel()
-    #     if self.payment_entry:
-    #         pe = frappe.get_doc("Payment Entry", self.payment_entry)
-    #         if pe.docstatus == 1:
-    #             pe.cancel()
+	# def on_cancel(self):
+	#     if self.journal_entry:
+	#         je = frappe.get_doc("Journal Entry", self.journal_entry)
+	#         if je.docstatus == 1:
+	#             je.cancel()
+	#     if self.payment_entry:
+	#         pe = frappe.get_doc("Payment Entry", self.payment_entry)
+	#         if pe.docstatus == 1:
+	#             pe.cancel()
 
-    def on_cancel(self):
-        for field in [
-            "journal_entry",
-            "sponsorship_reversal_je",
-            "reallocation_je",
-            "disbursement_journal_entry",
-            "payment_entry"
-        ]:
-            doc_name = self.get(field)
-            if not doc_name:
-                continue
-            if frappe.db.exists("Journal Entry", doc_name):
-                je = frappe.get_doc("Journal Entry", doc_name)
-                if je.docstatus == 1:
-                    je.cancel()
-            elif frappe.db.exists("Payment Entry", doc_name):
-                pe = frappe.get_doc("Payment Entry", doc_name)
-                if pe.docstatus == 1:
-                    pe.cancel()
+	def on_cancel(self):
+		for field in [
+			"journal_entry",
+			"sponsorship_reversal_je",
+			"reallocation_je",
+			"disbursement_journal_entry",
+			"payment_entry",
+		]:
+			doc_name = self.get(field)
+			if not doc_name:
+				continue
+			if frappe.db.exists("Journal Entry", doc_name):
+				je = frappe.get_doc("Journal Entry", doc_name)
+				if je.docstatus == 1:
+					je.cancel()
+			elif frappe.db.exists("Payment Entry", doc_name):
+				pe = frappe.get_doc("Payment Entry", doc_name)
+				if pe.docstatus == 1:
+					pe.cancel()
 
-    
-    def validate_hostel_items(self):
-        if self.request_type != "Hostel":
-            return
-        if not self.items:
-            return
+	def validate_hostel_items(self):
+		if self.request_type != "Hostel":
+			return
+		if not self.items:
+			return
 
-        for row in self.items:
-            if not row.sales_invoice:
-                continue
-            original = flt(row.original_amount)
-            refundable = flt(row.refundable_amount)
+		for row in self.items:
+			if not row.sales_invoice:
+				continue
+			original = flt(row.original_amount)
+			refundable = flt(row.refundable_amount)
 
-            if refundable <= 0:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.customer_name}</b>: "
-                    f"Amount Due for Refund must be greater than zero."
-                )
+			if refundable <= 0:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.customer_name}</b>: "
+					f"Amount Due for Refund must be greater than zero."
+				)
 
-            if refundable > original:
-                frappe.throw(
-                    f"Row {row.idx} — <b>{row.customer_name}</b>: "
-                    f"Amount Due for Refund (<b>{refundable:,.2f}</b>) cannot exceed "
-                    f"Invoice Amount (<b>{original:,.2f}</b>)."
-                )
+			if refundable > original:
+				frappe.throw(
+					f"Row {row.idx} — <b>{row.customer_name}</b>: "
+					f"Amount Due for Refund (<b>{refundable:,.2f}</b>) cannot exceed "
+					f"Invoice Amount (<b>{original:,.2f}</b>)."
+				)
 
-    def validate_graduation_refund(self):
-        if not self.graduation_student:
-            return
+	def validate_graduation_refund(self):
+		if not self.graduation_student:
+			return
 
-        # 1. Check ledger balance is negative (school owes student)
-        gl_balance = self._get_student_gl_balance(self.graduation_student)
-        if gl_balance >= 0:
-            frappe.throw(
-                f"<b>{self.graduation_student_name or self.graduation_student}</b> does not have a credit balance "
-                f"in the ledger (Balance: <b>₦{gl_balance:,.2f}</b>). "
-                f"Only students the school owes money can be refunded."
-            )
+		# 1. Check ledger balance is negative (school owes student)
+		gl_balance = self._get_student_gl_balance(self.graduation_student)
+		if gl_balance >= 0:
+			frappe.throw(
+				f"<b>{self.graduation_student_name or self.graduation_student}</b> does not have a credit balance "
+				f"in the ledger (Balance: <b>₦{gl_balance:,.2f}</b>). "
+				f"Only students the school owes money can be refunded."
+			)
 
-        credit_balance = abs(gl_balance)
+		credit_balance = abs(gl_balance)
 
-        # 2. Check no unpaid invoices
-        unpaid_invoices = frappe.db.sql("""
+		# 2. Check no unpaid invoices
+		unpaid_invoices = frappe.db.sql(
+			"""
             SELECT name, grand_total, outstanding_amount
             FROM `tabSales Invoice`
             WHERE customer = %s
             AND docstatus = 1
             AND outstanding_amount > 0
             AND is_return = 0
-        """, (self.graduation_student,), as_dict=True)
+        """,
+			(self.graduation_student,),
+			as_dict=True,
+		)
 
-        if unpaid_invoices:
-            inv_list = ", ".join([i.name for i in unpaid_invoices])
-            frappe.throw(
-                f"<b>{self.graduation_student_name or self.graduation_student}</b> has unpaid invoices: "
-                f"<b>{inv_list}</b>. All invoices must be settled before a graduation refund can be processed."
-            )
+		if unpaid_invoices:
+			inv_list = ", ".join([i.name for i in unpaid_invoices])
+			frappe.throw(
+				f"<b>{self.graduation_student_name or self.graduation_student}</b> has unpaid invoices: "
+				f"<b>{inv_list}</b>. All invoices must be settled before a graduation refund can be processed."
+			)
 
-        # 3. Amount to refund cannot exceed ledger credit balance
-        amount_to_refund = flt(self.graduation_amount_to_refund)
-        if amount_to_refund > credit_balance:
-            frappe.throw(
-                f"Amount to Refund (<b>₦{amount_to_refund:,.2f}</b>) cannot exceed the student's "
-                f"credit balance in the ledger (<b>₦{credit_balance:,.2f}</b>)."
-            )
+		# 3. Amount to refund cannot exceed ledger credit balance
+		amount_to_refund = flt(self.graduation_amount_to_refund)
+		if amount_to_refund > credit_balance:
+			frappe.throw(
+				f"Amount to Refund (<b>₦{amount_to_refund:,.2f}</b>) cannot exceed the student's "
+				f"credit balance in the ledger (<b>₦{credit_balance:,.2f}</b>)."
+			)
 
-        # Set total_amount for display
-        self.total_amount = amount_to_refund
+		# Set total_amount for display
+		self.total_amount = amount_to_refund
 
-    
+	# ─── REFUND EXCESS ALLOCATION VALIDATIONS ─────────────────────────────────
 
-    # ─── REFUND EXCESS ALLOCATION VALIDATIONS ─────────────────────────────────
+	def validate_excess_allocation(self):
+		if not self.excess_sponsorship_allocation:
+			return
 
-    def validate_excess_allocation(self):
-        if not self.excess_sponsorship_allocation:
-            return
+		sa = frappe.get_doc("Sponsorship Allocation", self.excess_sponsorship_allocation)
 
-        sa = frappe.get_doc("Sponsorship Allocation", self.excess_sponsorship_allocation)
+		# Available net balance on the SA (unallocated portion minus already returned)
+		sa_balance = flt(sa.balance)
+		previously_returned = self._get_excess_previously_returned(self.excess_sponsorship_allocation)
+		net_returnable = sa_balance - previously_returned
 
-        # Available net balance on the SA (unallocated portion minus already returned)
-        sa_balance       = flt(sa.balance)
-        previously_returned = self._get_excess_previously_returned(self.excess_sponsorship_allocation)
-        net_returnable   = sa_balance - previously_returned
+		if net_returnable <= 0:
+			frappe.throw(
+				f"There is no returnable balance left on Sponsorship Allocation "
+				f"<b>{self.excess_sponsorship_allocation}</b>. "
+				f"SA Balance: <b>{sa_balance:,.2f}</b> | "
+				f"Already Returned: <b>{previously_returned:,.2f}</b>.",
+				title="No Returnable Balance",
+			)
 
-        if net_returnable <= 0:
-            frappe.throw(
-                f"There is no returnable balance left on Sponsorship Allocation "
-                f"<b>{self.excess_sponsorship_allocation}</b>. "
-                f"SA Balance: <b>{sa_balance:,.2f}</b> | "
-                f"Already Returned: <b>{previously_returned:,.2f}</b>.",
-                title="No Returnable Balance"
-            )
+		# School bank GL balance
+		school_bank = self.excess_school_bank_account
+		if not school_bank:
+			# frappe.throw(
+			#     "School Bank Account not found. Please re-select the Sponsorship Allocation.",
+			#     title="Missing Account"
+			# )
+			if self.workflow_state == "Pending PV":
+				frappe.throw(
+					"Please select the Account to Refund From before proceeding.", title="Missing Account"
+				)
+			return
 
-        # School bank GL balance
-        school_bank = self.excess_school_bank_account
-        if not school_bank:
-            frappe.throw(
-                "School Bank Account not found. Please re-select the Sponsorship Allocation.",
-                title="Missing Account"
-            )
+		school_bank_balance = self._get_account_gl_balance(school_bank)
+		max_transferable = min(school_bank_balance, net_returnable)
 
-        school_bank_balance = self._get_account_gl_balance(school_bank)
-        max_transferable = min(school_bank_balance, net_returnable)
+		# Update computed fields
+		self.excess_sa_balance = sa_balance
+		self.excess_previously_returned = previously_returned
+		self.excess_school_bank_gl_balance = school_bank_balance
+		self.excess_max_transferable = max_transferable
+		self.total_amount = flt(self.excess_amount_to_return)
 
-        # Update computed fields
-        self.excess_sa_balance        = sa_balance
-        self.excess_previously_returned = previously_returned
-        self.excess_school_bank_gl_balance = school_bank_balance
-        self.excess_max_transferable  = max_transferable
-        self.total_amount             = flt(self.excess_amount_to_return)
+		amount = flt(self.excess_amount_to_return)
 
-        amount = flt(self.excess_amount_to_return)
+		if amount <= 0:
+			frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
 
-        if amount <= 0:
-            frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
+		if amount > max_transferable:
+			frappe.throw(
+				f"Amount to Return (<b>{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
+				f"(<b>{max_transferable:,.2f}</b>).<br><br>"
+				f"School Bank GL Balance: <b>{school_bank_balance:,.2f}</b><br>"
+				f"Net SA Returnable Balance: <b>{net_returnable:,.2f}</b>",
+				title="Amount Exceeds Limit",
+			)
 
-        if amount > max_transferable:
-            frappe.throw(
-                f"Amount to Return (<b>{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
-                f"(<b>{max_transferable:,.2f}</b>).<br><br>"
-                f"School Bank GL Balance: <b>{school_bank_balance:,.2f}</b><br>"
-                f"Net SA Returnable Balance: <b>{net_returnable:,.2f}</b>",
-                title="Amount Exceeds Limit"
-            )
-
-    def _get_account_gl_balance(self, account):
-        """
-        Returns the net debit balance of an account (GL).
-        Positive = debit balance (money in account).
-        """
-        result = frappe.db.sql("""
+	def _get_account_gl_balance(self, account):
+		"""
+		Returns the net debit balance of an account (GL).
+		Positive = debit balance (money in account).
+		"""
+		result = frappe.db.sql(
+			"""
             SELECT COALESCE(SUM(debit - credit), 0)
             FROM `tabGL Entry`
             WHERE account = %s
             AND is_cancelled = 0
-        """, (account,))
-        return flt(result[0][0]) if result else 0.0
+        """,
+			(account,),
+		)
+		return flt(result[0][0]) if result else 0.0
 
-    def _get_excess_previously_returned(self, sa_name):
-        """
-        Sum of excess_amount_to_return across all CLOSED Refund Excess Allocation
-        docs linked to this SA (excluding current doc).
-        """
-        result = frappe.db.sql("""
+	def _get_excess_previously_returned(self, sa_name):
+		"""
+		Sum of excess_amount_to_return across all CLOSED Refund Excess Allocation
+		docs linked to this SA (excluding current doc).
+		"""
+		result = frappe.db.sql(
+			"""
             SELECT COALESCE(SUM(excess_amount_to_return), 0)
             FROM `tabStudent Refund`
             WHERE refund_type = 'Refund Unallocated Amount'
@@ -529,67 +561,65 @@ class StudentRefund(Document):
             AND workflow_state = 'Closed'
             AND docstatus = 1
             AND name != %s
-        """, (sa_name, self.name or ""))
-        return flt(result[0][0]) if result else 0.0
+        """,
+			(sa_name, self.name or ""),
+		)
+		return flt(result[0][0]) if result else 0.0
 
-    def clear_narration_fields(self):
-        narration_fields = [
-            'registrar_narration',
-            'accountant_narration', 
-            'finance_officer_narration',
-            'internal_auditor_narration',
-            'payable_accountant_narration',
-            'senior_accountant_narration',
-            'dvc_narration'
-        ]
-        for field in narration_fields:
-            if self.get(field):
-                self.set(field, '')
-
-
-
-
+	def clear_narration_fields(self):
+		narration_fields = [
+			"registrar_narration",
+			"accountant_narration",
+			"finance_officer_narration",
+			"internal_auditor_narration",
+			"payable_accountant_narration",
+			"senior_accountant_narration",
+			"dvc_narration",
+		]
+		for field in narration_fields:
+			if self.get(field):
+				self.set(field, "")
 
 
 @frappe.whitelist()
 def get_account_gl_balance(account):
-    result = frappe.db.sql(
-        "SELECT COALESCE(SUM(debit - credit), 0) FROM `tabGL Entry`"
-        " WHERE account = %s AND is_cancelled = 0",
-        (account,)
-    )
-    return flt(result[0][0]) if result else 0.0
+	result = frappe.db.sql(
+		"SELECT COALESCE(SUM(debit - credit), 0) FROM `tabGL Entry` WHERE account = %s AND is_cancelled = 0",
+		(account,),
+	)
+	return flt(result[0][0]) if result else 0.0
 
 
 @frappe.whitelist()
 def get_excess_allocation_data(sa_name, current_doc=None):
-    """
-    Called from the JS form when user selects a Sponsorship Allocation
-    on a Refund Excess Allocation document.
-    Returns all data needed to populate the read-only fields.
-    """
-    sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+	"""
+	Called from the JS form when user selects a Sponsorship Allocation
+	on a Refund Excess Allocation document.
+	Returns all data needed to populate the read-only fields.
+	"""
+	sa = frappe.get_doc("Sponsorship Allocation", sa_name)
 
-    # ── Donor / Sponsor GL ────────────────────────────────────────────────────
-    sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
-    if not sponsor_gl_account:
-        frappe.throw(
-            f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
-            "Please set it on the Donor record before proceeding.",
-            title="Missing Sponsor GL Account"
-        )
+	# ── Donor / Sponsor GL ────────────────────────────────────────────────────
+	sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
+	if not sponsor_gl_account:
+		frappe.throw(
+			f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
+			"Please set it on the Donor record before proceeding.",
+			title="Missing Sponsor GL Account",
+		)
 
-    # ── External request reference from Donation ─────────────────────────────
-    external_request_reference = None
-    if sa.donation:
-        external_request_reference = frappe.db.get_value(
-            "Donation", sa.donation, "custom_external_request_reference"
-        )
+	# ── External request reference from Donation ─────────────────────────────
+	external_request_reference = None
+	if sa.donation:
+		external_request_reference = frappe.db.get_value(
+			"Donation", sa.donation, "custom_external_request_reference"
+		)
 
-    # ── SA balance and previously returned ───────────────────────────────────
-    sa_balance = flt(sa.balance)
+	# ── SA balance and previously returned ───────────────────────────────────
+	sa_balance = flt(sa.balance)
 
-    previously_returned_result = frappe.db.sql("""
+	previously_returned_result = frappe.db.sql(
+		"""
         SELECT COALESCE(SUM(excess_amount_to_return), 0)
         FROM `tabStudent Refund`
         WHERE refund_type = 'Refund Unallocated Amount'
@@ -597,39 +627,43 @@ def get_excess_allocation_data(sa_name, current_doc=None):
         AND workflow_state = 'Closed'
         AND docstatus = 1
         AND name != %s
-    """, (sa_name, current_doc or ""))
-    previously_returned = flt(previously_returned_result[0][0]) if previously_returned_result else 0.0
+    """,
+		(sa_name, current_doc or ""),
+	)
+	previously_returned = flt(previously_returned_result[0][0]) if previously_returned_result else 0.0
 
-    net_returnable = sa_balance - previously_returned
+	net_returnable = sa_balance - previously_returned
 
-    return {
-        "donor":                        sa.donor,
-        "donor_name":                   sa.donor_name,
-        "total_donated":                flt(sa.amount),
-        "sa_balance":                   sa_balance,
-        "sponsor_gl_account":           sponsor_gl_account,
-        "previously_returned":          previously_returned,
-        "net_returnable":               net_returnable,
-        "external_request_reference":   external_request_reference,
-    }
+	return {
+		"donor": sa.donor,
+		"donor_name": sa.donor_name,
+		"total_donated": flt(sa.amount),
+		"sa_balance": sa_balance,
+		"sponsor_gl_account": sponsor_gl_account,
+		"previously_returned": previously_returned,
+		"net_returnable": net_returnable,
+		"external_request_reference": external_request_reference,
+	}
+
 
 @frappe.whitelist()
 def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filters):
-    funder = filters.get("funder")
-    current_doc = filters.get("current_doc")  # pass current doc name to exclude self
+	funder = filters.get("funder")
+	current_doc = filters.get("current_doc")  # pass current doc name to exclude self
 
-    # Get SA names already used in a closed Refund to Funder
-    # used_sa_names = frappe.db.sql("""
-    #     SELECT DISTINCT sponsorship_allocation
-    #     FROM `tabStudent Refund`
-    #     WHERE action_type = 'Refund to Funder'
-    #     AND docstatus = 1
-    #     AND sponsorship_allocation IS NOT NULL
-    #     AND sponsorship_allocation != ''
-    #     AND name != %s
-    # """, (current_doc or "",), as_list=True)
+	# Get SA names already used in a closed Refund to Funder
+	# used_sa_names = frappe.db.sql("""
+	#     SELECT DISTINCT sponsorship_allocation
+	#     FROM `tabStudent Refund`
+	#     WHERE action_type = 'Refund to Funder'
+	#     AND docstatus = 1
+	#     AND sponsorship_allocation IS NOT NULL
+	#     AND sponsorship_allocation != ''
+	#     AND name != %s
+	# """, (current_doc or "",), as_list=True)
 
-    used_sa_names = frappe.db.sql("""
+	used_sa_names = frappe.db.sql(
+		"""
         SELECT DISTINCT sponsorship_allocation
         FROM `tabStudent Refund`
         WHERE action_type = 'Refund to Funder'
@@ -638,21 +672,25 @@ def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filt
         AND sponsorship_allocation IS NOT NULL
         AND sponsorship_allocation != ''
         AND name != %s
-    """, (current_doc or "",), as_list=True)
+    """,
+		(current_doc or "",),
+		as_list=True,
+	)
 
-    used_sa_list = [d[0] for d in used_sa_names] if used_sa_names else []
+	used_sa_list = [d[0] for d in used_sa_names] if used_sa_names else []
 
-    exclusion_clause = ""
-    values = [funder, f"%{txt}%", f"%{txt}%", f"%{txt}%"]
+	exclusion_clause = ""
+	values = [funder, f"%{txt}%", f"%{txt}%", f"%{txt}%"]
 
-    if used_sa_list:
-        placeholders = ", ".join(["%s"] * len(used_sa_list))
-        exclusion_clause = f"AND sa.name NOT IN ({placeholders})"
-        values.extend(used_sa_list)
+	if used_sa_list:
+		placeholders = ", ".join(["%s"] * len(used_sa_list))
+		exclusion_clause = f"AND sa.name NOT IN ({placeholders})"
+		values.extend(used_sa_list)
 
-    values.extend([page_len, start])
+	values.extend([page_len, start])
 
-    return frappe.db.sql(f"""
+	return frappe.db.sql(
+		f"""
         SELECT sa.name, sa.donor_name, sa.receipt_no, sa.amount
         FROM `tabSponsorship Allocation` sa
         WHERE sa.donor = %s
@@ -661,52 +699,52 @@ def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filt
         {exclusion_clause}
         ORDER BY sa.creation DESC
         LIMIT %s OFFSET %s
-    """, values)
-
-
-
+    """,
+		values,
+	)
 
 
 @frappe.whitelist()
 def get_hostel_invoices(doctype, txt, searchfield, start, page_len, filters):
-    customer = filters.get("customer") or ""
-    session  = filters.get("custom_session") or ""
-    semester = filters.get("custom_semester") or ""
+	customer = filters.get("customer") or ""
+	session = filters.get("custom_session") or ""
+	semester = filters.get("custom_semester") or ""
 
-    conditions = [
-        "si.docstatus = 1",
-        "si.outstanding_amount >= 0",
-        "si.is_return = 0",
-        "si.status IN ('Paid', 'Partly Paid')",
-        "si.custom_desc LIKE %s"
-    ]
-    values = ["%Accommodation Fee%"]
+	conditions = [
+		"si.docstatus = 1",
+		"si.outstanding_amount >= 0",
+		"si.is_return = 0",
+		"si.status IN ('Paid', 'Partly Paid')",
+		"si.custom_desc LIKE %s",
+	]
+	values = ["%Accommodation Fee%"]
 
-    if customer:
-        conditions.append("si.customer = %s")
-        values.append(customer)
+	if customer:
+		conditions.append("si.customer = %s")
+		values.append(customer)
 
-    if session:
-        conditions.append("si.custom_session LIKE %s")
-        values.append(f"%{session}%")
+	if session:
+		conditions.append("si.custom_session LIKE %s")
+		values.append(f"%{session}%")
 
-    if semester:
-        conditions.append("si.custom_semester LIKE %s")
-        values.append(f"%{semester}%")
+	if semester:
+		conditions.append("si.custom_semester LIKE %s")
+		values.append(f"%{semester}%")
 
-    if txt:
-        conditions.append("""
+	if txt:
+		conditions.append("""
             (si.name LIKE %s
             OR si.customer_name LIKE %s
             OR si.custom_session LIKE %s
             OR si.custom_semester LIKE %s
             OR si.custom_level LIKE %s)
         """)
-        values += [f"%{txt}%"] * 5
+		values += [f"%{txt}%"] * 5
 
-    where_clause = " AND ".join(conditions)
+	where_clause = " AND ".join(conditions)
 
-    return frappe.db.sql(f"""
+	return frappe.db.sql(
+		f"""
         SELECT
             si.name,
             si.customer_name,
@@ -717,55 +755,57 @@ def get_hostel_invoices(doctype, txt, searchfield, start, page_len, filters):
         WHERE {where_clause}
         ORDER BY si.posting_date DESC
         LIMIT %s OFFSET %s
-    """, values + [int(page_len), int(start)])
+    """,
+		values + [int(page_len), int(start)],
+	)
 
 
 def before_update_after_submit(self, method=None):
-    self.flags.ignore_mandatory = True
-    # self._protect_narration_fields()
-    self.capture_remark_trail()
-    self.clear_narration_fields()
+	self.flags.ignore_mandatory = True
+	# self._protect_narration_fields()
+	self.capture_remark_trail()
+	self.clear_narration_fields()
 
 
 def append_remark_to_trail(doc, remark_field, role_label):
-    """
-    Call this whenever a remark field is updated.
-    Appends a timestamped entry to remarks_trail.
-    """
-    new_remark = doc.get(remark_field)
-    if not new_remark:
-        return
+	"""
+	Call this whenever a remark field is updated.
+	Appends a timestamped entry to remarks_trail.
+	"""
+	new_remark = doc.get(remark_field)
+	if not new_remark:
+		return
 
-    user = frappe.session.user
-    fullname = get_fullname(user)
-    timestamp = now_datetime().strftime("%d %b %Y %H:%M")
+	user = frappe.session.user
+	fullname = get_fullname(user)
+	timestamp = now_datetime().strftime("%d %b %Y %H:%M")
 
-    entry = f"[{timestamp}] {role_label} — {fullname}:\n{new_remark}\n{'-'*60}"
+	entry = f"[{timestamp}] {role_label} — {fullname}:\n{new_remark}\n{'-' * 60}"
 
-    existing = doc.remarks_trail or ""
-    doc.remarks_trail = f"{existing}\n{entry}".strip()
-
+	existing = doc.remarks_trail or ""
+	doc.remarks_trail = f"{existing}\n{entry}".strip()
 
 
 @frappe.whitelist()
 def get_cheque_donations(doctype, txt, searchfield, start, page_len, filters):
-    import json
+	import json
 
-    if isinstance(filters, str):
-        filters = json.loads(filters)
+	if isinstance(filters, str):
+		filters = json.loads(filters)
 
-    funder = filters.get("funder") or ""
-    current_doc = filters.get("current_doc") or ""
+	funder = filters.get("funder") or ""
+	current_doc = filters.get("current_doc") or ""
 
-    txt_clause = "AND (d.name LIKE %s OR d.custom_cheque_id LIKE %s)" if txt else ""
-    values = [funder]
+	txt_clause = "AND (d.name LIKE %s OR d.custom_cheque_id LIKE %s)" if txt else ""
+	values = [funder]
 
-    if txt:
-        values.extend([f"%{txt}%", f"%{txt}%"])
+	if txt:
+		values.extend([f"%{txt}%", f"%{txt}%"])
 
-    values.extend([int(page_len), int(start)])
+	values.extend([int(page_len), int(start)])
 
-    return frappe.db.sql(f"""
+	return frappe.db.sql(
+		f"""
         SELECT d.name, d.custom_cheque_id, d.amount, d.date
         FROM `tabDonation` d
         WHERE d.docstatus = 1
@@ -785,53 +825,58 @@ def get_cheque_donations(doctype, txt, searchfield, start, page_len, filters):
         {txt_clause}
         ORDER BY d.date DESC
         LIMIT %s OFFSET %s
-    """, [funder, current_doc, funder] + ([f"%{txt}%", f"%{txt}%"] if txt else []) + [int(page_len), int(start)])
-
+    """,
+		[funder, current_doc, funder]
+		+ ([f"%{txt}%", f"%{txt}%"] if txt else [])
+		+ [int(page_len), int(start)],
+	)
 
 
 @frappe.whitelist()
 def get_cancellation_data(donation, funder):
-    # allocations = frappe.db.sql("""
-    #     SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated
-    #     FROM `tabSponsorship Allocation` sa
-    #     WHERE sa.donation = %s
-    #     AND sa.docstatus = 1
-    # """, (donation,), as_dict=True)
+	# allocations = frappe.db.sql("""
+	#     SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated
+	#     FROM `tabSponsorship Allocation` sa
+	#     WHERE sa.donation = %s
+	#     AND sa.docstatus = 1
+	# """, (donation,), as_dict=True)
 
-    allocations = frappe.db.sql("""
+	allocations = frappe.db.sql(
+		"""
         SELECT sa.name, sa.receipt_no, sa.amount, sa.total_allocated, sa.balance
         FROM `tabSponsorship Allocation` sa
         WHERE sa.donation = %s
         AND sa.docstatus = 1
-    """, (donation,), as_dict=True)
+    """,
+		(donation,),
+		as_dict=True,
+	)
 
-    if not allocations:
-        frappe.msgprint(
-            "No Sponsorship Allocations found for this Donation.",
-            title="No Allocations Found",
-            indicator="blue"
-        )
-        return {
-            "allocations": [],
-            "beneficiaries": []
-        }
+	if not allocations:
+		frappe.msgprint(
+			"No Sponsorship Allocations found for this Donation.",
+			title="No Allocations Found",
+			indicator="blue",
+		)
+		return {"allocations": [], "beneficiaries": []}
 
-    sa_names = [sa['name'] for sa in allocations]
-    placeholders = ", ".join(["%s"] * len(sa_names))
+	sa_names = [sa["name"] for sa in allocations]
+	placeholders = ", ".join(["%s"] * len(sa_names))
 
-    # GROUP BY student to prevent duplicates across multiple allocations
-    # beneficiaries_raw = frappe.db.sql(f"""
-    #     SELECT
-    #         sab.student,
-    #         sab.student_name,
-    #         SUM(sab.amount) as amount
-    #     FROM `tabSponsorship Allocation Beneficiary` sab
-    #     WHERE sab.parent IN ({placeholders})
-    #     GROUP BY sab.student, sab.student_name
-    #     ORDER BY sab.student_name
-    # """, sa_names, as_dict=True)
+	# GROUP BY student to prevent duplicates across multiple allocations
+	# beneficiaries_raw = frappe.db.sql(f"""
+	#     SELECT
+	#         sab.student,
+	#         sab.student_name,
+	#         SUM(sab.amount) as amount
+	#     FROM `tabSponsorship Allocation Beneficiary` sab
+	#     WHERE sab.parent IN ({placeholders})
+	#     GROUP BY sab.student, sab.student_name
+	#     ORDER BY sab.student_name
+	# """, sa_names, as_dict=True)
 
-    beneficiaries_raw = frappe.db.sql(f"""
+	beneficiaries_raw = frappe.db.sql(
+		f"""
         SELECT
             sab.student,
             sab.student_name,
@@ -840,38 +885,40 @@ def get_cancellation_data(donation, funder):
         FROM `tabSponsorship Allocation Beneficiary` sab
         WHERE sab.parent IN ({placeholders})
         ORDER BY sab.student_name, sab.parent
-    """, sa_names, as_dict=True)
+    """,
+		sa_names,
+		as_dict=True,
+	)
 
-    return {
-        "allocations": allocations,
-        "beneficiaries": beneficiaries_raw
-    }
+	return {"allocations": allocations, "beneficiaries": beneficiaries_raw}
 
 
 @frappe.whitelist()
 def get_graduation_student_balance(customer):
-    """
-    Returns the net GL balance for a student.
-    Negative = credit balance (school owes student) — eligible for refund.
-    Positive = debit balance (student owes school) — not eligible.
-    """
-    result = frappe.db.sql("""
+	"""
+	Returns the net GL balance for a student.
+	Negative = credit balance (school owes student) — eligible for refund.
+	Positive = debit balance (student owes school) — not eligible.
+	"""
+	result = frappe.db.sql(
+		"""
         SELECT COALESCE(SUM(debit - credit), 0)
         FROM `tabGL Entry`
         WHERE party_type = 'Customer'
         AND party = %s
         AND is_cancelled = 0
-    """, (customer,))
-    return flt(result[0][0]) if result else 0.0
-
+    """,
+		(customer,),
+	)
+	return flt(result[0][0]) if result else 0.0
 
 
 # def trigger_portal_webhook(doc, method):
-#     if (doc.workflow_state == "Closed" and 
-#         doc.request_type == "Graduation" and 
+#     if (doc.workflow_state == "Closed" and
+#         doc.request_type == "Graduation" and
 #         doc.action_type == "Refund a Student" and
 #         doc.custom_portal_refund_id):
-        
+
 #         try:
 #             from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
 #             webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
@@ -883,39 +930,45 @@ def get_graduation_student_balance(customer):
 #         frappe.log_error(title="Portal Webhook Skipped", message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}")
 
 
-
-
 def trigger_portal_webhook(doc, method):
-    # Graduation refund
-    if (doc.workflow_state == "Closed" and 
-        doc.request_type == "Graduation" and 
-        doc.action_type == "Refund a Student" and
-        doc.custom_portal_refund_id):
-        
-        try:
-            from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
-            webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
-            enqueue_webhook(doc, webhook)
-            frappe.log_error(title="Portal Webhook Triggered", message=f"Graduation webhook triggered for {doc.name}")
-        except Exception as e:
-            frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+	# Graduation refund
+	if (
+		doc.workflow_state == "Closed"
+		and doc.request_type == "Graduation"
+		and doc.action_type == "Refund a Student"
+		and doc.custom_portal_refund_id
+	):
+		try:
+			from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
 
-    # Hostel refund
-    elif (doc.workflow_state == "Hostel Closed" and
-          doc.request_type == "Hostel" and
-          doc.action_type == "Hostel Refund" and
-          doc.custom_portal_refund_id):
+			webhook = frappe.get_doc("Webhook", "Graduation Refund Trigger")
+			enqueue_webhook(doc, webhook)
+			frappe.log_error(
+				title="Portal Webhook Triggered", message=f"Graduation webhook triggered for {doc.name}"
+			)
+		except Exception as e:
+			frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
 
-        try:
-            from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
-            webhook = frappe.get_doc("Webhook", "Student Hostel Refund")
-            enqueue_webhook(doc, webhook)
-            frappe.log_error(title="Portal Webhook Triggered", message=f"Hostel webhook triggered for {doc.name}")
-        except Exception as e:
-            frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+	# Hostel refund
+	elif (
+		doc.workflow_state == "Hostel Closed"
+		and doc.request_type == "Hostel"
+		and doc.action_type == "Hostel Refund"
+		and doc.custom_portal_refund_id
+	):
+		try:
+			from frappe.integrations.doctype.webhook.webhook import enqueue_webhook
 
-    else:
-        frappe.log_error(
-            title="Portal Webhook Skipped",
-            message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}"
-        )
+			webhook = frappe.get_doc("Webhook", "Student Hostel Refund")
+			enqueue_webhook(doc, webhook)
+			frappe.log_error(
+				title="Portal Webhook Triggered", message=f"Hostel webhook triggered for {doc.name}"
+			)
+		except Exception as e:
+			frappe.log_error(title="Portal Webhook Failed", message=f"Failed for {doc.name}: {str(e)}")
+
+	else:
+		frappe.log_error(
+			title="Portal Webhook Skipped",
+			message=f"Conditions not met for {doc.name} — workflow_state={doc.workflow_state}, request_type={doc.request_type}, action_type={doc.action_type}, portal_id={doc.custom_portal_refund_id}",
+		)

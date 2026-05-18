@@ -4,6 +4,24 @@
 
 frappe.ui.form.on('Student Refund', {
 
+    before_workflow_action: function (frm) {
+        const is_excess_refund =
+            ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
+            frm.doc.action_type === 'Refund to Funder' &&
+            frm.doc.refund_type === 'Refund Unallocated Amount';
+
+        const is_leaving_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+        if (is_excess_refund && is_leaving_pending_pv) {
+            if (!frm.doc.excess_school_bank_account) {
+                frappe.throw({
+                    title: __('Missing Account'),
+                    message: __('Please select the Account to Refund From before forwarding from Pending PV.')
+                });
+            }
+        }
+    },
+
     setup: function (frm) {
         frm.set_query('sponsorship_allocation', function () {
             if (!frm.doc.funder) {
@@ -107,6 +125,9 @@ frappe.ui.form.on('Student Refund', {
                 }
             };
         });
+
+
+
     },
 
     source_student: function (frm) {
@@ -345,16 +366,37 @@ frappe.ui.form.on('Student Refund', {
     // },
 
 
+    // lock_excess_bank_account: function (frm) {
+    //     if (!['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type)) return;
+    //     if (frm.doc.action_type !== 'Refund to Funder') return;
+    //     if (frm.doc.refund_type !== 'Refund Unallocated Amount') return;
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_payable_accountant = user_roles.includes('Payable Accountant');
+    //     const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+    //     const show = is_payable_accountant && is_pending_pv;
+
+    //     frm.toggle_display('section_excess_accounts', show);
+    //     frm.toggle_display('excess_school_bank_account', show);
+    //     frm.toggle_display('excess_school_bank_gl_balance', show);
+    //     frm.toggle_display('col_break_excess_2', show);
+    //     frm.toggle_display('excess_sponsor_gl_account', show);
+    //     frm.toggle_display('excess_previously_returned', show);
+    // },
+
     lock_excess_bank_account: function (frm) {
-        if (!['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type)) return;
-        if (frm.doc.action_type !== 'Refund to Funder') return;
-        if (frm.doc.refund_type !== 'Refund Unallocated Amount') return;
+        const is_excess_refund =
+            ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
+            frm.doc.action_type === 'Refund to Funder' &&
+            frm.doc.refund_type === 'Refund Unallocated Amount';
 
         const user_roles = frappe.user_roles || [];
         const is_payable_accountant = user_roles.includes('Payable Accountant');
         const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
 
-        const show = is_payable_accountant && is_pending_pv;
+        const show = is_excess_refund && is_pending_pv;
+        const can_edit = show && is_payable_accountant;
 
         frm.toggle_display('section_excess_accounts', show);
         frm.toggle_display('excess_school_bank_account', show);
@@ -362,6 +404,12 @@ frappe.ui.form.on('Student Refund', {
         frm.toggle_display('col_break_excess_2', show);
         frm.toggle_display('excess_sponsor_gl_account', show);
         frm.toggle_display('excess_previously_returned', show);
+
+        frm.set_df_property('excess_school_bank_account', 'hidden', show ? 0 : 1);
+        frm.set_df_property('excess_school_bank_account', 'read_only', can_edit ? 0 : 1);
+
+        frm.refresh_field('section_excess_accounts');
+        frm.refresh_field('excess_school_bank_account');
     },
 
     workflow_state: function (frm) {
