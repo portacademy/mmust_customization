@@ -1185,5 +1185,6 @@ frappe.ui.form.on('Student Refund Item', {
         });
         frm.set_value('total_amount', total);
         frm.refresh_field('total_amount');
+
     },
 });
