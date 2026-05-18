@@ -172,6 +172,7 @@ frappe.ui.form.on('Student Refund', {
 
         frm.trigger('lock_narration_fields');
         frm.trigger('lock_graduation_fields');
+        frm.trigger('lock_excess_bank_account');
     },
 
     lock_narration_fields: function (frm) {
@@ -328,8 +329,44 @@ frappe.ui.form.on('Student Refund', {
         frm.refresh_field('graduation_bank_account');
     },
 
+    // lock_excess_bank_account: function (frm) {
+    //     if (!['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type)) return;
+    //     if (frm.doc.action_type !== 'Refund to Funder') return;
+    //     if (frm.doc.refund_type !== 'Refund Unallocated Amount') return;
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_payable_accountant = user_roles.includes('Payable Accountant');
+    //     const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+    //     const can_edit = is_payable_accountant && is_pending_pv;
+
+    //     frm.set_df_property('excess_school_bank_account', 'read_only', can_edit ? 0 : 1);
+    //     frm.refresh_field('excess_school_bank_account');
+    // },
+
+
+    lock_excess_bank_account: function (frm) {
+        if (!['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type)) return;
+        if (frm.doc.action_type !== 'Refund to Funder') return;
+        if (frm.doc.refund_type !== 'Refund Unallocated Amount') return;
+
+        const user_roles = frappe.user_roles || [];
+        const is_payable_accountant = user_roles.includes('Payable Accountant');
+        const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+        const show = is_payable_accountant && is_pending_pv;
+
+        frm.toggle_display('section_excess_accounts', show);
+        frm.toggle_display('excess_school_bank_account', show);
+        frm.toggle_display('excess_school_bank_gl_balance', show);
+        frm.toggle_display('col_break_excess_2', show);
+        frm.toggle_display('excess_sponsor_gl_account', show);
+        frm.toggle_display('excess_previously_returned', show);
+    },
+
     workflow_state: function (frm) {
         frm.trigger('add_print_cheque_button');
+        frm.trigger('lock_excess_bank_account');
     },
 
 
