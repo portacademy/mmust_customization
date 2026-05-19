@@ -426,6 +426,8 @@ frappe.ui.form.on('Student Refund', {
 
         frm.refresh_field('section_excess_accounts');
         frm.refresh_field('excess_school_bank_account');
+
+        frm.toggle_display('excess_max_transferable', show);
     },
 
     workflow_state: function (frm) {
@@ -996,6 +998,31 @@ frappe.ui.form.on('Student Refund', {
                 }
 
                 // Helpful inline message
+                // if (d.max_transferable <= 0) {
+                //     frappe.msgprint({
+                //         title: __('No Returnable Balance'),
+                //         indicator: 'orange',
+                //         message: __(
+                //             'This Sponsorship Allocation has no balance available to return. ' +
+                //             'SA Unallocated Balance: <b>{0}</b> | Already Returned: <b>{1}</b> | ' +
+                //             'School Bank GL Balance: <b>{2}</b>',
+                //             [
+                //                 format_currency(d.sa_balance),
+                //                 format_currency(d.previously_returned),
+                //                 format_currency(d.school_bank_gl_balance)
+                //             ]
+                //         )
+                //     });
+                // } else {
+                //     frappe.show_alert({
+                //         message: __(
+                //             'Maximum returnable amount: <b>{0}</b>',
+                //             [format_currency(d.max_transferable)]
+                //         ),
+                //         indicator: 'blue'
+                //     }, 6);
+                // }
+
                 if (d.max_transferable <= 0) {
                     frappe.msgprint({
                         title: __('No Returnable Balance'),
@@ -1011,7 +1038,7 @@ frappe.ui.form.on('Student Refund', {
                             ]
                         )
                     });
-                } else {
+                } else if (frm.doc.workflow_state === 'Pending PV') {
                     frappe.show_alert({
                         message: __(
                             'Maximum returnable amount: <b>{0}</b>',
