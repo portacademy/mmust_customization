@@ -480,6 +480,13 @@ class StudentRefund(Document):
 
 		sa = frappe.get_doc("Sponsorship Allocation", self.excess_sponsorship_allocation)
 
+		if sa.donor != self.funder:
+			frappe.throw(
+				f"Sponsorship Allocation <b>{self.excess_sponsorship_allocation}</b> belongs to "
+				f"<b>{sa.donor}</b>, not the selected Funder <b>{self.funder}</b>.",
+				title="Invalid Sponsorship Allocation",
+			)
+
 		# Available net balance on the SA (unallocated portion minus already returned)
 		sa_balance = flt(sa.balance)
 		previously_returned = self._get_excess_previously_returned(self.excess_sponsorship_allocation)

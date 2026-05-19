@@ -416,7 +416,7 @@ def post_refund_payment_entry(doc):
 		f"Dr {funding_account}<br>"
 		f"Cr {bank_account}<br>"
 		f"Amount Refunded: <b>{currency}{amount:,.2f}</b>",
-		title="Disbursement Complete",
+		title="Refund Complete",
 		indicator="green",
 	)
 

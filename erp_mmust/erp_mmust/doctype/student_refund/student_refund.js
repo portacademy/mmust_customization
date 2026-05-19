@@ -117,11 +117,27 @@ frappe.ui.form.on('Student Refund', {
         });
 
         // Excess Allocation — only show submitted SAs
+        // Excess Allocation — only show submitted Sponsorship Allocations
+        // belonging to the selected Funder (Donor)
         frm.set_query('excess_sponsorship_allocation', function () {
+            if (!frm.doc.funder) {
+                frappe.msgprint({
+                    title: __('Funder Required'),
+                    indicator: 'orange',
+                    message: __('Please select a Funder before selecting a Sponsorship Allocation.')
+                });
+
+                return {
+                    filters: {
+                        name: '__none__'
+                    }
+                };
+            }
+
             return {
                 filters: {
                     docstatus: 1,
-                    donor: frm.doc.funder || undefined
+                    donor: frm.doc.funder
                 }
             };
         });
