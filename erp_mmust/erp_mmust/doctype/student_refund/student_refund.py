@@ -474,6 +474,141 @@ class StudentRefund(Document):
 
 	# ─── REFUND EXCESS ALLOCATION VALIDATIONS ─────────────────────────────────
 
+	# def validate_excess_allocation(self):
+	# 	if not self.excess_sponsorship_allocation:
+	# 		return
+
+	# 	sa = frappe.get_doc("Sponsorship Allocation", self.excess_sponsorship_allocation)
+
+	# 	if sa.donor != self.funder:
+	# 		frappe.throw(
+	# 			f"Sponsorship Allocation <b>{self.excess_sponsorship_allocation}</b> belongs to "
+	# 			f"<b>{sa.donor}</b>, not the selected Funder <b>{self.funder}</b>.",
+	# 			title="Invalid Sponsorship Allocation",
+	# 		)
+
+	# 	# Available net balance on the SA (unallocated portion minus already returned)
+	# 	sa_balance = flt(sa.balance)
+	# 	previously_returned = self._get_excess_previously_returned(self.excess_sponsorship_allocation)
+	# 	net_returnable = sa_balance - previously_returned
+
+	# 	if net_returnable <= 0:
+	# 		frappe.throw(
+	# 			f"There is no returnable balance left on Sponsorship Allocation "
+	# 			f"<b>{self.excess_sponsorship_allocation}</b>. "
+	# 			f"SA Balance: <b>{sa_balance:,.2f}</b> | "
+	# 			f"Already Returned: <b>{previously_returned:,.2f}</b>.",
+	# 			title="No Returnable Balance",
+	# 		)
+
+	# 	# School bank GL balance
+	# 	school_bank = self.excess_school_bank_account
+	# 	if not school_bank:
+	# 		# frappe.throw(
+	# 		#     "School Bank Account not found. Please re-select the Sponsorship Allocation.",
+	# 		#     title="Missing Account"
+	# 		# )
+	# 		if self.workflow_state == "Pending PV":
+	# 			frappe.throw(
+	# 				"Please select the Account to Refund From before proceeding.", title="Missing Account"
+	# 			)
+	# 		return
+
+	# 	school_bank_balance = self._get_account_gl_balance(school_bank)
+	# 	max_transferable = min(school_bank_balance, net_returnable)
+
+	# 	# Update computed fields
+	# 	self.excess_sa_balance = sa_balance
+	# 	self.excess_previously_returned = previously_returned
+	# 	self.excess_school_bank_gl_balance = school_bank_balance
+	# 	self.excess_max_transferable = max_transferable
+	# 	self.total_amount = flt(self.excess_amount_to_return)
+
+	# 	amount = flt(self.excess_amount_to_return)
+
+	# 	if amount <= 0:
+	# 		frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
+
+	# 	if amount > max_transferable:
+	# 		frappe.throw(
+	# 			f"Amount to Return (<b>{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
+	# 			f"(<b>{max_transferable:,.2f}</b>).<br><br>"
+	# 			f"School Bank GL Balance: <b>{school_bank_balance:,.2f}</b><br>"
+	# 			f"Net SA Returnable Balance: <b>{net_returnable:,.2f}</b>",
+	# 			title="Amount Exceeds Limit",
+	# 		)
+ 
+ 
+	# def validate_excess_allocation(self):
+	# 	if not self.excess_sponsorship_allocation:
+	# 		return
+
+	# 	sa = frappe.get_doc("Sponsorship Allocation", self.excess_sponsorship_allocation)
+
+	# 	if sa.donor != self.funder:
+	# 		frappe.throw(
+	# 			f"Sponsorship Allocation <b>{self.excess_sponsorship_allocation}</b> belongs to "
+	# 			f"<b>{sa.donor}</b>, not the selected Funder <b>{self.funder}</b>.",
+	# 			title="Invalid Sponsorship Allocation",
+	# 		)
+
+	# 	# balance already reflects refunded_unallocated_amount —
+	# 	# post_excess_allocation_return reduces it directly in DB
+	# 	sa_balance = flt(sa.balance)
+	# 	previously_returned = flt(sa.refunded_unallocated_amount) or 0.0
+	# 	net_returnable = sa_balance  # no double-subtract — balance is already the true remaining
+
+	# 	if net_returnable <= 0:
+	# 		frappe.throw(
+	# 			f"There is no returnable balance left on Sponsorship Allocation "
+	# 			f"<b>{self.excess_sponsorship_allocation}</b>. "
+	# 			f"SA Balance: <b>₦{sa_balance:,.2f}</b> | "
+	# 			f"Already Returned: <b>₦{previously_returned:,.2f}</b>.",
+	# 			title="No Returnable Balance",
+	# 		)
+
+	# 	amount = flt(self.excess_amount_to_return)
+
+	# 	if amount <= 0:
+	# 		frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
+
+	# 	# Always validate against net_returnable regardless of bank account
+	# 	if amount > net_returnable:
+	# 		frappe.throw(
+	# 			f"Amount to Return (<b>₦{amount:,.2f}</b>) cannot exceed the returnable balance "
+	# 			f"(<b>₦{net_returnable:,.2f}</b>).<br><br>"
+	# 			f"SA Unallocated Balance: <b>₦{sa_balance:,.2f}</b><br>"
+	# 			f"Already Returned to Sponsor: <b>₦{previously_returned:,.2f}</b>",
+	# 			title="Amount Exceeds SA Balance",
+	# 		)
+
+	# 	school_bank = self.excess_school_bank_account
+	# 	if not school_bank:
+	# 		if self.workflow_state == "Pending PV":
+	# 			frappe.throw(
+	# 				"Please select the Account to Refund From before proceeding.", title="Missing Account"
+	# 			)
+	# 		return
+
+	# 	school_bank_balance = self._get_account_gl_balance(school_bank)
+	# 	max_transferable = min(school_bank_balance, net_returnable)
+
+	# 	# Update computed fields
+	# 	self.excess_sa_balance = sa_balance
+	# 	self.excess_previously_returned = previously_returned
+	# 	self.excess_school_bank_gl_balance = school_bank_balance
+	# 	self.excess_max_transferable = max_transferable
+	# 	self.total_amount = amount
+
+	# 	if amount > max_transferable:
+	# 		frappe.throw(
+	# 			f"Amount to Return (<b>₦{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
+	# 			f"(<b>₦{max_transferable:,.2f}</b>).<br><br>"
+	# 			f"School Bank GL Balance: <b>₦{school_bank_balance:,.2f}</b><br>"
+	# 			f"Net SA Returnable Balance: <b>₦{net_returnable:,.2f}</b>",
+	# 			title="Amount Exceeds Limit",
+	# 		)
+  
 	def validate_excess_allocation(self):
 		if not self.excess_sponsorship_allocation:
 			return
@@ -487,31 +622,47 @@ class StudentRefund(Document):
 				title="Invalid Sponsorship Allocation",
 			)
 
-		# Available net balance on the SA (unallocated portion minus already returned)
+		# balance already reflects refunded_unallocated_amount —
+		# post_excess_allocation_return reduces it directly in DB
 		sa_balance = flt(sa.balance)
-		previously_returned = self._get_excess_previously_returned(self.excess_sponsorship_allocation)
-		net_returnable = sa_balance - previously_returned
+		previously_returned = flt(sa.refunded_unallocated_amount) or 0.0
+		net_returnable = sa_balance
 
 		if net_returnable <= 0:
 			frappe.throw(
 				f"There is no returnable balance left on Sponsorship Allocation "
 				f"<b>{self.excess_sponsorship_allocation}</b>. "
-				f"SA Balance: <b>{sa_balance:,.2f}</b> | "
-				f"Already Returned: <b>{previously_returned:,.2f}</b>.",
+				f"SA Balance: <b>₦{sa_balance:,.2f}</b> | "
+				f"Already Returned: <b>₦{previously_returned:,.2f}</b>.",
 				title="No Returnable Balance",
 			)
 
-		# School bank GL balance
+		amount = flt(self.excess_amount_to_return)
+
+		if amount <= 0:
+			frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
+
+		# Always validate against net_returnable regardless of bank account
+		if amount > net_returnable:
+			frappe.throw(
+				f"Amount to Return (<b>₦{amount:,.2f}</b>) cannot exceed the returnable balance "
+				f"(<b>₦{net_returnable:,.2f}</b>).<br><br>"
+				f"SA Unallocated Balance: <b>₦{sa_balance:,.2f}</b><br>"
+				f"Already Returned to Sponsor: <b>₦{previously_returned:,.2f}</b>",
+				title="Amount Exceeds SA Balance",
+			)
+
 		school_bank = self.excess_school_bank_account
 		if not school_bank:
-			# frappe.throw(
-			#     "School Bank Account not found. Please re-select the Sponsorship Allocation.",
-			#     title="Missing Account"
-			# )
 			if self.workflow_state == "Pending PV":
 				frappe.throw(
 					"Please select the Account to Refund From before proceeding.", title="Missing Account"
 				)
+			return
+
+		# Only validate bank balance at Pending PV and beyond
+		pending_pv_states = ["Pending PV", "Pending FO PV Approval", "Pending Final Approval", "Closed"]
+		if self.workflow_state not in pending_pv_states:
 			return
 
 		school_bank_balance = self._get_account_gl_balance(school_bank)
@@ -522,19 +673,14 @@ class StudentRefund(Document):
 		self.excess_previously_returned = previously_returned
 		self.excess_school_bank_gl_balance = school_bank_balance
 		self.excess_max_transferable = max_transferable
-		self.total_amount = flt(self.excess_amount_to_return)
-
-		amount = flt(self.excess_amount_to_return)
-
-		if amount <= 0:
-			frappe.throw("Amount to Return must be greater than zero.", title="Invalid Amount")
+		self.total_amount = amount
 
 		if amount > max_transferable:
 			frappe.throw(
-				f"Amount to Return (<b>{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
-				f"(<b>{max_transferable:,.2f}</b>).<br><br>"
-				f"School Bank GL Balance: <b>{school_bank_balance:,.2f}</b><br>"
-				f"Net SA Returnable Balance: <b>{net_returnable:,.2f}</b>",
+				f"Amount to Return (<b>₦{amount:,.2f}</b>) cannot exceed the Maximum Transferable Amount "
+				f"(<b>₦{max_transferable:,.2f}</b>).<br><br>"
+				f"School Bank GL Balance: <b>₦{school_bank_balance:,.2f}</b><br>"
+				f"Net SA Returnable Balance: <b>₦{net_returnable:,.2f}</b>",
 				title="Amount Exceeds Limit",
 			)
 
@@ -554,24 +700,29 @@ class StudentRefund(Document):
 		)
 		return flt(result[0][0]) if result else 0.0
 
+	# def _get_excess_previously_returned(self, sa_name):
+	# 	"""
+	# 	Sum of excess_amount_to_return across all CLOSED Refund Excess Allocation
+	# 	docs linked to this SA (excluding current doc).
+	# 	"""
+	# 	result = frappe.db.sql(
+	# 		"""
+    #         SELECT COALESCE(SUM(excess_amount_to_return), 0)
+    #         FROM `tabStudent Refund`
+    #         WHERE refund_type = 'Refund Unallocated Amount'
+    #         AND excess_sponsorship_allocation = %s
+    #         AND workflow_state = 'Closed'
+    #         AND docstatus = 1
+    #         AND name != %s
+    #     """,
+	# 		(sa_name, self.name or ""),
+	# 	)
+	# 	return flt(result[0][0]) if result else 0.0
+
 	def _get_excess_previously_returned(self, sa_name):
-		"""
-		Sum of excess_amount_to_return across all CLOSED Refund Excess Allocation
-		docs linked to this SA (excluding current doc).
-		"""
-		result = frappe.db.sql(
-			"""
-            SELECT COALESCE(SUM(excess_amount_to_return), 0)
-            FROM `tabStudent Refund`
-            WHERE refund_type = 'Refund Unallocated Amount'
-            AND excess_sponsorship_allocation = %s
-            AND workflow_state = 'Closed'
-            AND docstatus = 1
-            AND name != %s
-        """,
-			(sa_name, self.name or ""),
-		)
-		return flt(result[0][0]) if result else 0.0
+		return flt(frappe.db.get_value(
+			"Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+		)) or 0.0
 
 	def clear_narration_fields(self):
 		narration_fields = [
@@ -597,62 +748,159 @@ def get_account_gl_balance(account):
 	return flt(result[0][0]) if result else 0.0
 
 
+# @frappe.whitelist()
+# def get_excess_allocation_data(sa_name, current_doc=None):
+# 	"""
+# 	Called from the JS form when user selects a Sponsorship Allocation
+# 	on a Refund Excess Allocation document.
+# 	Returns all data needed to populate the read-only fields.
+# 	"""
+# 	sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+
+# 	# ── Donor / Sponsor GL ────────────────────────────────────────────────────
+# 	sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
+# 	if not sponsor_gl_account:
+# 		frappe.throw(
+# 			f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
+# 			"Please set it on the Donor record before proceeding.",
+# 			title="Missing Sponsor GL Account",
+# 		)
+
+# 	# ── External request reference from Donation ─────────────────────────────
+# 	external_request_reference = None
+# 	if sa.donation:
+# 		external_request_reference = frappe.db.get_value(
+# 			"Donation", sa.donation, "custom_external_request_reference"
+# 		)
+
+# 	# ── SA balance and previously returned ───────────────────────────────────
+# 	sa_balance = flt(sa.balance)
+
+# 	previously_returned_result = frappe.db.sql(
+# 		"""
+#         SELECT COALESCE(SUM(excess_amount_to_return), 0)
+#         FROM `tabStudent Refund`
+#         WHERE refund_type = 'Refund Unallocated Amount'
+#         AND excess_sponsorship_allocation = %s
+#         AND workflow_state = 'Closed'
+#         AND docstatus = 1
+#         AND name != %s
+#     """,
+# 		(sa_name, current_doc or ""),
+# 	)
+# 	previously_returned = flt(previously_returned_result[0][0]) if previously_returned_result else 0.0
+
+# 	net_returnable = sa_balance - previously_returned
+
+# 	return {
+# 		"donor": sa.donor,
+# 		"donor_name": sa.donor_name,
+# 		"total_donated": flt(sa.amount),
+# 		"sa_balance": sa_balance,
+# 		"sponsor_gl_account": sponsor_gl_account,
+# 		"previously_returned": previously_returned,
+# 		"net_returnable": net_returnable,
+# 		"external_request_reference": external_request_reference,
+# 	}
+
+
+# @frappe.whitelist()
+# def get_excess_allocation_data(sa_name, current_doc=None):
+#     sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+
+#     sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
+#     if not sponsor_gl_account:
+#         frappe.throw(
+#             f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
+#             "Please set it on the Donor record before proceeding.",
+#             title="Missing Sponsor GL Account",
+#         )
+
+#     external_request_reference = None
+#     if sa.donation:
+#         external_request_reference = frappe.db.get_value(
+#             "Donation", sa.donation, "custom_external_request_reference"
+#         )
+
+#     sa_balance = flt(sa.balance)
+
+#     # Read from the dedicated tracker field instead of summing Student Refund docs
+#     previously_returned = flt(sa.refunded_unallocated_amount) or 0.0
+
+#     net_returnable = sa_balance - previously_returned
+#     max_transferable = net_returnable  # school_bank_gl_balance not known yet — user selects account later
+
+#     return {
+#         "donor": sa.donor,
+#         "donor_name": sa.donor_name,
+#         "total_donated": flt(sa.amount),
+#         "sa_balance": sa_balance,
+#         "sponsor_gl_account": sponsor_gl_account,
+#         "previously_returned": previously_returned,
+#         "net_returnable": net_returnable,
+#         "max_transferable": max_transferable,
+#         "external_request_reference": external_request_reference,
+#     }
+
 @frappe.whitelist()
 def get_excess_allocation_data(sa_name, current_doc=None):
-	"""
-	Called from the JS form when user selects a Sponsorship Allocation
-	on a Refund Excess Allocation document.
-	Returns all data needed to populate the read-only fields.
-	"""
-	sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+    sa = frappe.get_doc("Sponsorship Allocation", sa_name)
 
-	# ── Donor / Sponsor GL ────────────────────────────────────────────────────
-	sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
-	if not sponsor_gl_account:
-		frappe.throw(
-			f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
-			"Please set it on the Donor record before proceeding.",
-			title="Missing Sponsor GL Account",
-		)
+    sponsor_gl_account = frappe.db.get_value("Donor", sa.donor, "custom_sponsor_gl_account")
+    if not sponsor_gl_account:
+        frappe.throw(
+            f"Donor <b>{sa.donor}</b> does not have a Sponsor GL Account set. "
+            "Please set it on the Donor record before proceeding.",
+            title="Missing Sponsor GL Account",
+        )
 
-	# ── External request reference from Donation ─────────────────────────────
-	external_request_reference = None
-	if sa.donation:
-		external_request_reference = frappe.db.get_value(
-			"Donation", sa.donation, "custom_external_request_reference"
-		)
+    external_request_reference = None
+    if sa.donation:
+        external_request_reference = frappe.db.get_value(
+            "Donation", sa.donation, "custom_external_request_reference"
+        )
 
-	# ── SA balance and previously returned ───────────────────────────────────
-	sa_balance = flt(sa.balance)
+    # ── Recompute true available balance from donation level ──
+    if sa.donation:
+        donation_amount = flt(frappe.db.get_value("Donation", sa.donation, "amount") or 0)
 
-	previously_returned_result = frappe.db.sql(
-		"""
-        SELECT COALESCE(SUM(excess_amount_to_return), 0)
-        FROM `tabStudent Refund`
-        WHERE refund_type = 'Refund Unallocated Amount'
-        AND excess_sponsorship_allocation = %s
-        AND workflow_state = 'Closed'
-        AND docstatus = 1
-        AND name != %s
-    """,
-		(sa_name, current_doc or ""),
-	)
-	previously_returned = flt(previously_returned_result[0][0]) if previously_returned_result else 0.0
+        result = frappe.db.sql("""
+            SELECT
+                COALESCE(SUM(total_allocated), 0),
+                COALESCE(SUM(refunded_unallocated_amount), 0)
+            FROM `tabSponsorship Allocation`
+            WHERE donation = %s
+            AND docstatus != 2
+        """, (sa.donation,))[0]
 
-	net_returnable = sa_balance - previously_returned
+        total_allocated_across_all_sas = flt(result[0])
+        total_refunded_across_all_sas = flt(result[1])
 
-	return {
-		"donor": sa.donor,
-		"donor_name": sa.donor_name,
-		"total_donated": flt(sa.amount),
-		"sa_balance": sa_balance,
-		"sponsor_gl_account": sponsor_gl_account,
-		"previously_returned": previously_returned,
-		"net_returnable": net_returnable,
-		"external_request_reference": external_request_reference,
-	}
+        # True remaining = donation - all allocations to students - all returned to sponsor
+        true_available = donation_amount - total_allocated_across_all_sas - total_refunded_across_all_sas
 
+        # Cap to this SA's own balance — can't return more than what this SA holds
+        sa_balance = min(flt(sa.balance), true_available)
+    else:
+        sa_balance = flt(sa.balance)
 
+    previously_returned = flt(sa.refunded_unallocated_amount) or 0.0
+    net_returnable = sa_balance
+    max_transferable = net_returnable
+
+    return {
+        "donor": sa.donor,
+        "donor_name": sa.donor_name,
+        "total_donated": flt(sa.amount),
+        "sa_balance": sa_balance,
+        "sponsor_gl_account": sponsor_gl_account,
+        "previously_returned": previously_returned,
+        "net_returnable": net_returnable,
+        "max_transferable": max_transferable,
+        "external_request_reference": external_request_reference,
+    }
+    
+    
 @frappe.whitelist()
 def get_sponsorship_allocations(doctype, txt, searchfield, start, page_len, filters):
 	funder = filters.get("funder")

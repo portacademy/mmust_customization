@@ -401,33 +401,81 @@ frappe.ui.form.on('Student Refund', {
     //     frm.toggle_display('excess_previously_returned', show);
     // },
 
+    // lock_excess_bank_account: function (frm) {
+    //     const is_excess_refund =
+    //         ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
+    //         frm.doc.action_type === 'Refund to Funder' &&
+    //         frm.doc.refund_type === 'Refund Unallocated Amount';
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_payable_accountant = user_roles.includes('Payable Accountant');
+    //     const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+    //     const show = is_excess_refund && is_pending_pv;
+    //     const can_edit = show && is_payable_accountant;
+
+    //     // frm.toggle_display('section_excess_accounts', show);
+    //     frm.toggle_display('section_excess_accounts', is_excess_refund);
+    //     frm.toggle_display('excess_school_bank_account', show);
+    //     frm.toggle_display('excess_school_bank_gl_balance', show);
+    //     frm.toggle_display('col_break_excess_2', show);
+    //     frm.toggle_display('excess_sponsor_gl_account', show);
+    //     frm.toggle_display('excess_previously_returned', is_excess_refund);
+
+    //     frm.set_df_property('excess_school_bank_account', 'hidden', show ? 0 : 1);
+    //     frm.set_df_property('excess_school_bank_account', 'read_only', can_edit ? 0 : 1);
+
+    //     frm.refresh_field('section_excess_accounts');
+    //     frm.refresh_field('excess_school_bank_account');
+
+    //     frm.toggle_display('excess_max_transferable', show);
+    // },
+
     lock_excess_bank_account: function (frm) {
         const is_excess_refund =
             ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
             frm.doc.action_type === 'Refund to Funder' &&
-            frm.doc.refund_type === 'Refund Unallocated Amount';
+            frm.doc.refund_type === 'Refund Unallocated Amount' &&
+            !!frm.doc.funder;
 
         const user_roles = frappe.user_roles || [];
         const is_payable_accountant = user_roles.includes('Payable Accountant');
         const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
 
-        const show = is_excess_refund && is_pending_pv;
-        const can_edit = show && is_payable_accountant;
+        const show_pending_pv_fields = is_excess_refund && is_pending_pv;
+        const can_edit_account = show_pending_pv_fields && is_payable_accountant;
 
-        frm.toggle_display('section_excess_accounts', show);
-        frm.toggle_display('excess_school_bank_account', show);
-        frm.toggle_display('excess_school_bank_gl_balance', show);
-        frm.toggle_display('col_break_excess_2', show);
-        frm.toggle_display('excess_sponsor_gl_account', show);
-        frm.toggle_display('excess_previously_returned', show);
+        // Show Account Details section for the whole excess refund flow
+        // frm.toggle_display('section_excess_accounts', is_excess_refund);
 
-        frm.set_df_property('excess_school_bank_account', 'hidden', show ? 0 : 1);
-        frm.set_df_property('excess_school_bank_account', 'read_only', can_edit ? 0 : 1);
+        // Keep column break visible, otherwise right-column fields can disappear
+        // frm.toggle_display('col_break_excess_2', is_excess_refund);
+
+        // Finance Officer should see this from initiation
+        // frm.toggle_display('excess_previously_returned', is_excess_refund);
+        // frm.set_df_property('excess_previously_returned', 'hidden', is_excess_refund ? 0 : 1);
+        frm.set_df_property('excess_previously_returned', 'read_only', 1);
+
+        // Only show these at Pending PV
+        frm.toggle_display('excess_school_bank_account', show_pending_pv_fields);
+        frm.toggle_display('excess_school_bank_gl_balance', show_pending_pv_fields);
+        frm.toggle_display('excess_sponsor_gl_account', show_pending_pv_fields);
+        frm.toggle_display('excess_max_transferable', show_pending_pv_fields);
+
+        frm.set_df_property('excess_school_bank_account', 'hidden', show_pending_pv_fields ? 0 : 1);
+        frm.set_df_property('excess_school_bank_gl_balance', 'hidden', show_pending_pv_fields ? 0 : 1);
+        // frm.set_df_property('excess_sponsor_gl_account', 'hidden', show_pending_pv_fields ? 0 : 1);
+        frm.set_df_property('excess_max_transferable', 'hidden', show_pending_pv_fields ? 0 : 1);
+
+        frm.set_df_property('excess_school_bank_account', 'read_only', can_edit_account ? 0 : 1);
 
         frm.refresh_field('section_excess_accounts');
+        // frm.refresh_field('col_break_excess_2');
+        // frm.refresh_field('excess_previously_returned');
         frm.refresh_field('excess_school_bank_account');
-
-        frm.toggle_display('excess_max_transferable', show);
+        frm.refresh_field('excess_school_bank_gl_balance');
+        frm.refresh_field('excess_sponsor_gl_account');
+        frm.refresh_field('excess_max_transferable');
     },
 
     workflow_state: function (frm) {
@@ -1093,13 +1141,61 @@ frappe.ui.form.on('Student Refund', {
         });
     },
 
+    // excess_amount_to_return: function (frm) {
+    //     const amount = flt(frm.doc.excess_amount_to_return);
+    //     const max = flt(frm.doc.excess_max_transferable);
+
+    //     if (!frm.doc.excess_sponsorship_allocation) return;
+
+    //     if (amount > max && max > 0) {
+    //         frappe.msgprint({
+    //             title: __('Amount Exceeds Limit'),
+    //             indicator: 'red',
+    //             message: __(
+    //                 'Amount to Return (<b>{0}</b>) cannot exceed the Maximum Transferable Amount (<b>{1}</b>).<br><br>' +
+    //                 'School Bank GL Balance: <b>{2}</b><br>' +
+    //                 'Net SA Returnable Balance: <b>{3}</b>',
+    //                 [
+    //                     format_currency(amount),
+    //                     format_currency(max),
+    //                     format_currency(frm.doc.excess_school_bank_gl_balance),
+    //                     format_currency(flt(frm.doc.excess_sa_balance) - flt(frm.doc.excess_previously_returned))
+    //                 ]
+    //             )
+    //         });
+    //         frm.set_value('excess_amount_to_return', max);
+    //     }
+    // }
+
     excess_amount_to_return: function (frm) {
         const amount = flt(frm.doc.excess_amount_to_return);
         const max = flt(frm.doc.excess_max_transferable);
 
         if (!frm.doc.excess_sponsorship_allocation) return;
+        if (max <= 0) return;
+        if (amount <= max) return;
 
-        if (amount > max && max > 0) {
+        const has_bank = !!frm.doc.excess_school_bank_account;
+
+        if (!has_bank) {
+            // Draft stage — no bank account yet, cap is the SA returnable balance
+            frappe.msgprint({
+                title: __('Amount Exceeds SA Balance'),
+                indicator: 'red',
+                message: __(
+                    'Amount to Return (<b>{0}</b>) cannot exceed the SA returnable balance (<b>{1}</b>).<br><br>' +
+                    'SA Unallocated Balance: <b>{2}</b><br>' +
+                    'Already Returned to Sponsor: <b>{3}</b>',
+                    [
+                        format_currency(amount),
+                        format_currency(max),
+                        format_currency(frm.doc.excess_sa_balance),
+                        format_currency(frm.doc.excess_previously_returned)
+                    ]
+                )
+            });
+        } else {
+            // Pending PV stage — bank account selected, cap includes GL balance
             frappe.msgprint({
                 title: __('Amount Exceeds Limit'),
                 indicator: 'red',
@@ -1115,9 +1211,10 @@ frappe.ui.form.on('Student Refund', {
                     ]
                 )
             });
-            frm.set_value('excess_amount_to_return', max);
         }
-    }
+
+        // frm.set_value('excess_amount_to_return', max);
+},
 
 });
 

@@ -40,6 +40,7 @@
         "financial_summary_section",
         "total",
         "available_balance",
+        "refunded_unallocated_amount",
         "column_break_19",
         "balance",
         "total_allocated",
@@ -278,6 +279,14 @@
             "fieldtype": "Currency",
             "label": "Balance",
             "read_only": 1
+        },
+        {
+            "fieldname": "refunded_unallocated_amount",
+            "fieldtype": "Currency",
+            "label": "Refunded Unallocated Amount",
+            "read_only": 1,
+            "default": "0",
+            "description": "Total unallocated funds returned to sponsor via closed Refund Unallocated Amount docs"
         },
         {
             "fieldname": "beneficiaries_section",

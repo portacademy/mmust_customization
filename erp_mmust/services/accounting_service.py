@@ -1404,79 +1404,135 @@ def post_full_receipt_cancellation(doc):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def post_hostel_credit_note(doc):
-	if doc.request_type != "Hostel":
-		return
+# def post_excess_allocation_return(doc):
+#     """
+#     Called when a 'Refund Unallocated Amount' Student Refund reaches 'Closed'.
+#     Posts a Journal Entry:
+#         Dr  Sponsor GL Account   (reducing sponsor liability)
+#         Cr  School Bank Account  (money leaves school)
+#     """
+#     if frappe.db.get_value("Student Refund", doc.name, "excess_return_je"):
+#         return  # idempotency guard — already posted
 
-	if not doc.items:
-		frappe.throw("No items found. Cannot post Hostel Credit Note.")
+#     if not doc.excess_sponsorship_allocation:
+#         frappe.throw("Sponsorship Allocation is required to post excess allocation return.")
 
-	company = get_company()
-	currency = get_currency()
+#     currency = get_currency()
+#     company = get_company()
+#     amount = flt(doc.excess_amount_to_return)
 
-	for row in doc.items:
-		if not row.sales_invoice or not flt(row.refundable_amount) > 0:
-			continue
+#     if amount <= 0:
+#         frappe.throw("Amount to Return is zero — cannot post excess allocation return.")
 
-		if row.credit_note:
-			continue  # already posted
+#     school_bank_account = doc.excess_school_bank_account
+#     sponsor_gl_account = doc.excess_sponsor_gl_account
+#     sa_name = doc.excess_sponsorship_allocation
 
-		si = frappe.get_doc("Sales Invoice", row.sales_invoice)
+#     if not school_bank_account:
+#         frappe.throw(
+#             "Account to Refund From is missing. Payable Accountant must select it before approving.",
+#             title="Missing Account"
+#         )
 
-		cn = frappe.new_doc("Sales Invoice")
-		cn.is_return = 1
-		# cn.return_against = row.sales_invoice
-		cn.update_outstanding_for_self = 0
-		cn.customer = si.customer
-		cn.company = company
-		cn.posting_date = nowdate()
-		cn.due_date = nowdate()
-		cn.title = f"Credit Note - {doc.name}"
-		cn.pay_to_recd_from = si.customer_name
+#     if not sponsor_gl_account:
+#         frappe.throw(
+#             "Sponsor GL Account is missing. Please re-select the Sponsorship Allocation.",
+#             title="Missing Account"
+#         )
 
-		# Copy custom fields if present
-		for field in ["custom_semester", "custom_level", "custom_session"]:
-			if frappe.db.has_column("Sales Invoice", field):
-				cn.set(field, si.get(field))
+#     # ── Server-side guards — recompute from DB, never trust form values ──
+#     gl_balance = flt(frappe.db.sql(
+#         "SELECT COALESCE(SUM(debit - credit), 0) FROM `tabGL Entry` WHERE account = %s AND is_cancelled = 0",
+#         (school_bank_account,)
+#     )[0][0])
 
-		# Proportional credit based on refundable vs original
-		ratio = flt(row.refundable_amount) / flt(si.grand_total) if flt(si.grand_total) else 1
+#     if gl_balance <= 0:
+#         frappe.throw(
+#             f"The selected bank account <b>{school_bank_account}</b> has no available balance "
+#             f"(GL Balance: ₦{gl_balance:,.2f}). Cannot process refund.",
+#             title="Insufficient Bank Balance"
+#         )
 
-		for item in si.items:
-			cn.append(
-				"items",
-				{
-					"item_code": item.item_code,
-					"item_name": item.item_name,
-					"qty": -1,
-					"rate": flt(row.refundable_amount),
-					"income_account": item.income_account,
-					"cost_center": item.cost_center,
-					"description": (f"Credit Note for {doc.name} | Narration: {doc.narration or 'N/A'}"),
-				},
-			)
+#     previously_returned = flt(frappe.db.get_value(
+#         "Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+#     )) or 0.0
 
-		cn.insert(ignore_permissions=True)
-		cn.submit()
+#     sa_balance = flt(frappe.db.get_value("Sponsorship Allocation", sa_name, "balance"))
+#     net_returnable = sa_balance - previously_returned
+#     max_transferable = min(gl_balance, net_returnable)
 
-		frappe.db.set_value("Student Refund Item", row.name, "credit_note", cn.name)
-		frappe.db.commit()
+#     if amount > max_transferable:
+#         frappe.throw(
+#             f"Amount to Return (<b>₦{amount:,.2f}</b>) exceeds the maximum transferable amount "
+#             f"(<b>₦{max_transferable:,.2f}</b>).<br><br>"
+#             f"School Bank GL Balance: <b>₦{gl_balance:,.2f}</b><br>"
+#             f"SA Unallocated Balance: <b>₦{sa_balance:,.2f}</b><br>"
+#             f"Previously Returned: <b>₦{previously_returned:,.2f}</b><br>"
+#             f"Net Returnable: <b>₦{net_returnable:,.2f}</b>",
+#             title="Amount Exceeds Limit"
+#         )
+#     # ── END server-side guards ──
 
-		frappe.msgprint(
-			f"✅ Credit Note <b>{cn.name}</b> created against <b>{row.sales_invoice}</b><br>"
-			f"Customer: <b>{si.customer_name}</b><br>"
-			f"Amount: <b>{currency} {flt(row.refundable_amount):,.2f}</b>",
-			alert=True,
-			indicator="green",
-		)
+#     sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+#     funder = sa.donor
+#     funder_name = sa.donor_name or funder
 
-	frappe.msgprint(
-		f"✅ Hostel Credit Notes posted for <b>{doc.name}</b>.",
-		title="Hostel Credit Notes Complete",
-		indicator="green",
-	)
+#     je = frappe.new_doc("Journal Entry")
+#     je.voucher_type = "Bank Entry"
+#     je.company = company
+#     je.posting_date = nowdate()
+#     je.cheque_no = doc.name
+#     je.cheque_date = nowdate()
+#     je.user_remark = (
+#         f"Excess Allocation Return | {doc.name} | "
+#         f"Sponsorship Allocation: {sa_name} | "
+#         f"Sponsor: {funder_name} ({funder})"
+#     )
 
+#     # Cr School Bank Account — money leaves the school
+#     je.append("accounts", {
+#         "account": school_bank_account,
+#         "debit_in_account_currency": 0,
+#         "credit_in_account_currency": amount,
+#         "user_remark": f"Excess allocation return to {funder_name} | SA: {sa_name}",
+#     })
 
+#     # Dr Sponsor GL Account — reducing sponsor liability
+#     je.append("accounts", {
+#         "account": sponsor_gl_account,
+#         "party_type": "Donor",
+#         "party": funder,
+#         "debit_in_account_currency": amount,
+#         "credit_in_account_currency": 0,
+#         "user_remark": f"Excess allocation return — reducing sponsor liability | SA: {sa_name}",
+#     })
+
+#     je.insert(ignore_permissions=True)
+#     je.submit()
+
+#     frappe.db.set_value("Student Refund", doc.name, "excess_return_je", je.name)
+#     frappe.db.set_value("Student Refund", doc.name, "debit_account", sponsor_gl_account)
+#     frappe.db.set_value("Student Refund", doc.name, "credit_account", school_bank_account)
+
+#     # ── Update SA's refunded unallocated tracker ──
+#     current_refunded = flt(frappe.db.get_value(
+#     "Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+# 	)) or 0.0
+#     current_balance = flt(frappe.db.get_value("Sponsorship Allocation", sa_name, "balance"))
+#     frappe.db.set_value("Sponsorship Allocation", sa_name, "refunded_unallocated_amount", current_refunded + amount)
+#     frappe.db.set_value("Sponsorship Allocation", sa_name, "balance", max(current_balance - amount, 0))
+
+#     frappe.msgprint(
+#         f"✅ Refund Successfully Posted.<br>"
+#         f"Journal Entry: <b>{je.name}</b><br>"
+#         f"Dr {sponsor_gl_account} ({funder_name})<br>"
+#         f"Cr {school_bank_account} (School Bank — money out)<br>"
+#         f"Amount Returned: <b>{currency} {amount:,.2f}</b>",
+#         title="Excess Allocation Return Posted",
+#         indicator="green",
+#     )
+    
+    
 def post_graduation_student_refund(doc):
 	if frappe.db.get_value("Student Refund", doc.name, "disbursement_journal_entry"):
 		return
@@ -1551,15 +1607,118 @@ def post_graduation_student_refund(doc):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# def post_excess_allocation_return(doc):
+# 	"""
+# 	Called when a 'Refund Excess Allocation' Student Refund reaches 'Closed'.
+# 	Posts a Journal Entry:
+# 	    Dr  School Bank Account  (money leaves school)
+# 	    Cr  Sponsor GL Account   (liability to sponsor restored)
+# 	"""
+# 	if frappe.db.get_value("Student Refund", doc.name, "excess_return_je"):
+# 		return  # idempotency guard — already posted
+
+# 	if not doc.excess_sponsorship_allocation:
+# 		frappe.throw("Sponsorship Allocation is required to post excess allocation return.")
+
+# 	currency = get_currency()
+# 	company = get_company()
+# 	amount = flt(doc.excess_amount_to_return)
+
+# 	if amount <= 0:
+# 		frappe.throw("Amount to Return is zero — cannot post excess allocation return.")
+
+# 	school_bank_account = doc.excess_school_bank_account
+# 	sponsor_gl_account = doc.excess_sponsor_gl_account
+
+# 	if not school_bank_account:
+# 		frappe.throw(
+# 			"School Bank Account is missing on this document. Please re-select the Sponsorship Allocation.",
+# 			title="Missing Account",
+# 		)
+# 	if not sponsor_gl_account:
+# 		frappe.throw(
+# 			"Sponsor GL Account is missing on this document. Please re-select the Sponsorship Allocation.",
+# 			title="Missing Account",
+# 		)
+
+# 	sa_name = doc.excess_sponsorship_allocation
+# 	sa = frappe.get_doc("Sponsorship Allocation", sa_name)
+# 	funder = sa.donor
+# 	funder_name = sa.donor_name or funder
+
+# 	je = frappe.new_doc("Journal Entry")
+# 	je.voucher_type = "Bank Entry"
+# 	je.company = company
+# 	je.posting_date = nowdate()
+# 	je.cheque_no = doc.name
+# 	je.cheque_date = nowdate()
+# 	je.user_remark = (
+# 		f"Excess Allocation Return | {doc.name} | "
+# 		f"Sponsorship Allocation: {sa_name} | "
+# 		f"Sponsor: {funder_name} ({funder})"
+# 	)
+
+# 	# Dr School Bank Account — money leaves the school
+# 	je.append(
+# 		"accounts",
+# 		{
+# 			"account": school_bank_account,
+# 			"debit_in_account_currency": 0,
+# 			"credit_in_account_currency": amount,
+# 			"user_remark": (f"Excess allocation return to {funder_name} | SA: {sa_name}"),
+# 		},
+# 	)
+
+# 	# Cr Sponsor GL Account — liability to sponsor restored
+# 	je.append(
+# 		"accounts",
+# 		{
+# 			"account": sponsor_gl_account,
+# 			"party_type": "Donor",
+# 			"party": funder,
+# 			"debit_in_account_currency": amount,
+# 			"credit_in_account_currency": 0,
+# 			"user_remark": (f"Excess allocation return — reducing sponsor liability | SA: {sa_name}"),
+# 		},
+# 	)
+
+# 	je.insert(ignore_permissions=True)
+# 	je.submit()
+
+# 	frappe.db.set_value("Student Refund", doc.name, "excess_return_je", je.name)
+# 	frappe.db.set_value("Student Refund", doc.name, "debit_account", school_bank_account)
+# 	frappe.db.set_value("Student Refund", doc.name, "credit_account", sponsor_gl_account)
+ 
+# 	current_refunded = flt(frappe.db.get_value(
+# 		"Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+# 	)) or 0
+# 	frappe.db.set_value(
+# 		"Sponsorship Allocation",
+# 		sa_name,
+# 		"refunded_unallocated_amount",
+# 		current_refunded + amount
+# 	)
+
+# 	frappe.msgprint(
+# 		f"✅ Refund Successfully Posted.<br>"
+# 		f"Journal Entry: <b>{je.name}</b><br>"
+# 		f"Dr {school_bank_account} (School Bank — money out)<br>"
+# 		f"Cr {sponsor_gl_account} ({funder_name})<br>"
+# 		f"Amount Returned: <b>{currency} {amount:,.2f}</b>",
+# 		title="Excess Allocation Return Posted",
+# 		indicator="green",
+# 	)
+
+
 def post_excess_allocation_return(doc):
 	"""
-	Called when a 'Refund Excess Allocation' Student Refund reaches 'Closed'.
+	Called when a 'Refund Unallocated Amount' Student Refund reaches 'Closed'.
 	Posts a Journal Entry:
-	    Dr  School Bank Account  (money leaves school)
-	    Cr  Sponsor GL Account   (liability to sponsor restored)
+	    Dr  Sponsor GL Account   (reducing sponsor liability)
+	    Cr  School Bank Account  (money leaves school)
 	"""
 	if frappe.db.get_value("Student Refund", doc.name, "excess_return_je"):
-		return  # idempotency guard — already posted
+		return
 
 	if not doc.excess_sponsorship_allocation:
 		frappe.throw("Sponsorship Allocation is required to post excess allocation return.")
@@ -1573,19 +1732,52 @@ def post_excess_allocation_return(doc):
 
 	school_bank_account = doc.excess_school_bank_account
 	sponsor_gl_account = doc.excess_sponsor_gl_account
+	sa_name = doc.excess_sponsorship_allocation
 
 	if not school_bank_account:
 		frappe.throw(
-			"School Bank Account is missing on this document. Please re-select the Sponsorship Allocation.",
+			"Account to Refund From is missing. Payable Accountant must select it before approving.",
 			title="Missing Account",
 		)
 	if not sponsor_gl_account:
 		frappe.throw(
-			"Sponsor GL Account is missing on this document. Please re-select the Sponsorship Allocation.",
+			"Sponsor GL Account is missing. Please re-select the Sponsorship Allocation.",
 			title="Missing Account",
 		)
 
-	sa_name = doc.excess_sponsorship_allocation
+	# ── Server-side guards — recompute from DB, never trust form values ──
+	gl_balance = flt(frappe.db.sql(
+		"SELECT COALESCE(SUM(debit - credit), 0) FROM `tabGL Entry` WHERE account = %s AND is_cancelled = 0",
+		(school_bank_account,)
+	)[0][0])
+
+	if gl_balance <= 0:
+		frappe.throw(
+			f"The selected bank account <b>{school_bank_account}</b> has no available balance "
+			f"(GL Balance: ₦{gl_balance:,.2f}). Cannot process refund.",
+			title="Insufficient Bank Balance",
+		)
+
+	previously_returned = flt(frappe.db.get_value(
+		"Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+	)) or 0.0
+
+	sa_balance = flt(frappe.db.get_value("Sponsorship Allocation", sa_name, "balance"))
+	net_returnable = sa_balance - previously_returned
+	max_transferable = min(gl_balance, net_returnable)
+
+	if amount > max_transferable:
+		frappe.throw(
+			f"Amount to Return (<b>₦{amount:,.2f}</b>) exceeds the maximum transferable amount "
+			f"(<b>₦{max_transferable:,.2f}</b>).<br><br>"
+			f"School Bank GL Balance: <b>₦{gl_balance:,.2f}</b><br>"
+			f"SA Unallocated Balance: <b>₦{sa_balance:,.2f}</b><br>"
+			f"Previously Returned: <b>₦{previously_returned:,.2f}</b><br>"
+			f"Net Returnable: <b>₦{net_returnable:,.2f}</b>",
+			title="Amount Exceeds Limit",
+		)
+	# ── END server-side guards ──
+
 	sa = frappe.get_doc("Sponsorship Allocation", sa_name)
 	funder = sa.donor
 	funder_name = sa.donor_name or funder
@@ -1602,48 +1794,56 @@ def post_excess_allocation_return(doc):
 		f"Sponsor: {funder_name} ({funder})"
 	)
 
-	# Dr School Bank Account — money leaves the school
-	je.append(
-		"accounts",
-		{
-			"account": school_bank_account,
-			"debit_in_account_currency": 0,
-			"credit_in_account_currency": amount,
-			"user_remark": (f"Excess allocation return to {funder_name} | SA: {sa_name}"),
-		},
-	)
+	# Cr School Bank Account — money leaves the school
+	je.append("accounts", {
+		"account": school_bank_account,
+		"debit_in_account_currency": 0,
+		"credit_in_account_currency": amount,
+		"user_remark": f"Excess allocation return to {funder_name} | SA: {sa_name}",
+	})
 
-	# Cr Sponsor GL Account — liability to sponsor restored
-	je.append(
-		"accounts",
-		{
-			"account": sponsor_gl_account,
-			"party_type": "Donor",
-			"party": funder,
-			"debit_in_account_currency": amount,
-			"credit_in_account_currency": 0,
-			"user_remark": (f"Excess allocation return — reducing sponsor liability | SA: {sa_name}"),
-		},
-	)
+	# Dr Sponsor GL Account — reducing sponsor liability
+	je.append("accounts", {
+		"account": sponsor_gl_account,
+		"party_type": "Donor",
+		"party": funder,
+		"debit_in_account_currency": amount,
+		"credit_in_account_currency": 0,
+		"user_remark": f"Excess allocation return — reducing sponsor liability | SA: {sa_name}",
+	})
 
 	je.insert(ignore_permissions=True)
 	je.submit()
 
 	frappe.db.set_value("Student Refund", doc.name, "excess_return_je", je.name)
-	frappe.db.set_value("Student Refund", doc.name, "debit_account", school_bank_account)
-	frappe.db.set_value("Student Refund", doc.name, "credit_account", sponsor_gl_account)
+	frappe.db.set_value("Student Refund", doc.name, "debit_account", sponsor_gl_account)
+	frappe.db.set_value("Student Refund", doc.name, "credit_account", school_bank_account)
+
+	# ── Update SA tracker and balance directly in DB ──
+	current_refunded = flt(frappe.db.get_value(
+		"Sponsorship Allocation", sa_name, "refunded_unallocated_amount"
+	)) or 0.0
+	current_balance = flt(frappe.db.get_value("Sponsorship Allocation", sa_name, "balance"))
+
+	frappe.db.set_value(
+		"Sponsorship Allocation", sa_name,
+		"refunded_unallocated_amount", current_refunded + amount
+	)
+	frappe.db.set_value(
+		"Sponsorship Allocation", sa_name,
+		"balance", max(current_balance - amount, 0)
+	)
 
 	frappe.msgprint(
 		f"✅ Refund Successfully Posted.<br>"
 		f"Journal Entry: <b>{je.name}</b><br>"
-		f"Dr {school_bank_account} (School Bank — money out)<br>"
-		f"Cr {sponsor_gl_account} ({funder_name})<br>"
+		f"Dr {sponsor_gl_account} ({funder_name})<br>"
+		f"Cr {school_bank_account} (School Bank — money out)<br>"
 		f"Amount Returned: <b>{currency} {amount:,.2f}</b>",
 		title="Excess Allocation Return Posted",
 		indicator="green",
 	)
-
-
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────

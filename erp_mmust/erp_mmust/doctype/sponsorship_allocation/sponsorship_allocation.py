@@ -391,18 +391,40 @@ def get_beneficiary_for_print(docname, student):
     frappe.throw(f"Beneficiary {student} not found in {docname}")
 
 
+# @frappe.whitelist()
+# def get_donation_available_balance(donation, exclude_doc=""):
+#     from frappe.utils import flt
+
+#     donation_amount = flt(frappe.db.get_value("Donation", donation, "amount") or 0)
+
+#     total_used = frappe.db.sql("""
+#         SELECT COALESCE(SUM(total_allocated), 0)
+#         FROM `tabSponsorship Allocation`
+#         WHERE donation = %s
+#         AND docstatus != 2
+#         AND name != %s
+#     """, (donation, exclude_doc))[0][0] or 0
+
+#     return flt(donation_amount) - flt(total_used)
+
+
 @frappe.whitelist()
 def get_donation_available_balance(donation, exclude_doc=""):
     from frappe.utils import flt
 
     donation_amount = flt(frappe.db.get_value("Donation", donation, "amount") or 0)
 
-    total_used = frappe.db.sql("""
-        SELECT COALESCE(SUM(total_allocated), 0)
+    result = frappe.db.sql("""
+        SELECT 
+            COALESCE(SUM(total_allocated), 0),
+            COALESCE(SUM(refunded_unallocated_amount), 0)
         FROM `tabSponsorship Allocation`
         WHERE donation = %s
         AND docstatus != 2
         AND name != %s
-    """, (donation, exclude_doc))[0][0] or 0
+    """, (donation, exclude_doc))[0]
 
-    return flt(donation_amount) - flt(total_used)
+    total_allocated = flt(result[0])
+    total_refunded_unallocated = flt(result[1])
+
+    return flt(donation_amount) - total_allocated - total_refunded_unallocated
