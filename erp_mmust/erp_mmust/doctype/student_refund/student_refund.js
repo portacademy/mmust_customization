@@ -431,6 +431,53 @@ frappe.ui.form.on('Student Refund', {
     //     frm.toggle_display('excess_max_transferable', show);
     // },
 
+    // lock_excess_bank_account: function (frm) {
+    //     const is_excess_refund =
+    //         ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
+    //         frm.doc.action_type === 'Refund to Funder' &&
+    //         frm.doc.refund_type === 'Refund Unallocated Amount' &&
+    //         !!frm.doc.funder;
+
+    //     const user_roles = frappe.user_roles || [];
+    //     const is_payable_accountant = user_roles.includes('Payable Accountant');
+    //     const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+
+    //     const show_pending_pv_fields = is_excess_refund && is_pending_pv;
+    //     const can_edit_account = show_pending_pv_fields && is_payable_accountant;
+
+    //     // Show Account Details section for the whole excess refund flow
+    //     // frm.toggle_display('section_excess_accounts', is_excess_refund);
+
+    //     // Keep column break visible, otherwise right-column fields can disappear
+    //     // frm.toggle_display('col_break_excess_2', is_excess_refund);
+
+    //     // Finance Officer should see this from initiation
+    //     // frm.toggle_display('excess_previously_returned', is_excess_refund);
+    //     // frm.set_df_property('excess_previously_returned', 'hidden', is_excess_refund ? 0 : 1);
+    //     frm.set_df_property('excess_previously_returned', 'read_only', 1);
+
+    //     // Only show these at Pending PV
+    //     frm.toggle_display('excess_school_bank_account', show_pending_pv_fields);
+    //     frm.toggle_display('excess_school_bank_gl_balance', show_pending_pv_fields);
+    //     frm.toggle_display('excess_sponsor_gl_account', show_pending_pv_fields);
+    //     frm.toggle_display('excess_max_transferable', show_pending_pv_fields);
+
+    //     frm.set_df_property('excess_school_bank_account', 'hidden', show_pending_pv_fields ? 0 : 1);
+    //     frm.set_df_property('excess_school_bank_gl_balance', 'hidden', show_pending_pv_fields ? 0 : 1);
+    //     // frm.set_df_property('excess_sponsor_gl_account', 'hidden', show_pending_pv_fields ? 0 : 1);
+    //     frm.set_df_property('excess_max_transferable', 'hidden', show_pending_pv_fields ? 0 : 1);
+
+    //     frm.set_df_property('excess_school_bank_account', 'read_only', can_edit_account ? 0 : 1);
+
+    //     frm.refresh_field('section_excess_accounts');
+    //     // frm.refresh_field('col_break_excess_2');
+    //     // frm.refresh_field('excess_previously_returned');
+    //     frm.refresh_field('excess_school_bank_account');
+    //     frm.refresh_field('excess_school_bank_gl_balance');
+    //     frm.refresh_field('excess_sponsor_gl_account');
+    //     frm.refresh_field('excess_max_transferable');
+    // },
+
     lock_excess_bank_account: function (frm) {
         const is_excess_refund =
             ['HELB', 'CDF', 'Scholarship'].includes(frm.doc.request_type) &&
@@ -440,38 +487,34 @@ frappe.ui.form.on('Student Refund', {
 
         const user_roles = frappe.user_roles || [];
         const is_payable_accountant = user_roles.includes('Payable Accountant');
-        const is_pending_pv = frm.doc.workflow_state === 'Pending PV';
+        const workflow_state = frm.doc.workflow_state;
 
-        const show_pending_pv_fields = is_excess_refund && is_pending_pv;
-        const can_edit_account = show_pending_pv_fields && is_payable_accountant;
+        // Show bank fields from Pending PV onwards — not before
+        const pending_pv_and_beyond = [
+            'Pending PV', 'Pending FO PV Approval', 'Pending Final Approval', 'Closed'
+        ];
+        const is_pending_pv = workflow_state === 'Pending PV';
+        const is_past_pending_pv = pending_pv_and_beyond.includes(workflow_state);
 
-        // Show Account Details section for the whole excess refund flow
-        // frm.toggle_display('section_excess_accounts', is_excess_refund);
+        const show_bank_fields = is_excess_refund && is_past_pending_pv;
+        const can_edit_account = is_excess_refund && is_pending_pv && is_payable_accountant;
 
-        // Keep column break visible, otherwise right-column fields can disappear
-        // frm.toggle_display('col_break_excess_2', is_excess_refund);
-
-        // Finance Officer should see this from initiation
-        // frm.toggle_display('excess_previously_returned', is_excess_refund);
-        // frm.set_df_property('excess_previously_returned', 'hidden', is_excess_refund ? 0 : 1);
         frm.set_df_property('excess_previously_returned', 'read_only', 1);
 
-        // Only show these at Pending PV
-        frm.toggle_display('excess_school_bank_account', show_pending_pv_fields);
-        frm.toggle_display('excess_school_bank_gl_balance', show_pending_pv_fields);
-        frm.toggle_display('excess_sponsor_gl_account', show_pending_pv_fields);
-        frm.toggle_display('excess_max_transferable', show_pending_pv_fields);
+        // Show bank fields from Pending PV onwards — read only after PA stage
+        frm.toggle_display('excess_school_bank_account', show_bank_fields);
+        frm.toggle_display('excess_school_bank_gl_balance', show_bank_fields);
+        frm.toggle_display('excess_sponsor_gl_account', show_bank_fields);
+        frm.toggle_display('excess_max_transferable', show_bank_fields);
 
-        frm.set_df_property('excess_school_bank_account', 'hidden', show_pending_pv_fields ? 0 : 1);
-        frm.set_df_property('excess_school_bank_gl_balance', 'hidden', show_pending_pv_fields ? 0 : 1);
-        // frm.set_df_property('excess_sponsor_gl_account', 'hidden', show_pending_pv_fields ? 0 : 1);
-        frm.set_df_property('excess_max_transferable', 'hidden', show_pending_pv_fields ? 0 : 1);
+        frm.set_df_property('excess_school_bank_account', 'hidden', show_bank_fields ? 0 : 1);
+        frm.set_df_property('excess_school_bank_gl_balance', 'hidden', show_bank_fields ? 0 : 1);
+        frm.set_df_property('excess_max_transferable', 'hidden', show_bank_fields ? 0 : 1);
 
+        // Only Payable Accountant at Pending PV can edit — everyone else sees read only
         frm.set_df_property('excess_school_bank_account', 'read_only', can_edit_account ? 0 : 1);
 
         frm.refresh_field('section_excess_accounts');
-        // frm.refresh_field('col_break_excess_2');
-        // frm.refresh_field('excess_previously_returned');
         frm.refresh_field('excess_school_bank_account');
         frm.refresh_field('excess_school_bank_gl_balance');
         frm.refresh_field('excess_sponsor_gl_account');
